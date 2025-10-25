@@ -5,11 +5,12 @@ import { AddMedicationFlow } from '@/components/AddMedicationFlow';
 import { NextDoseCard } from '@/components/NextDoseCard';
 import { DayTimeline } from '@/components/DayTimeline';
 import { BottomNav } from '@/components/BottomNav';
+import { HeroHeader } from '@/components/HeroHeader';
 import { Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMedications } from '@/hooks/useMedications';
 import { useAuth } from '@/context/AuthProvider';
-import { getNextDose, getDosesByTimeOfDay, getGreeting, getDoseStatus } from '@/lib/medicationHelpers';
+import { getNextDose, getDosesByTimeOfDay, getDoseStatus } from '@/lib/medicationHelpers';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -29,7 +30,6 @@ export default function Dashboard() {
 
   const nextDose = getNextDose(medications, schedules, todayLogs, currentTime);
   const dosesTimeline = getDosesByTimeOfDay(medications, schedules, todayLogs, currentTime);
-  const greeting = getGreeting(user?.email?.split('@')[0] || null, currentTime);
 
   // Calculate status for next dose
   const nextDoseStatus = nextDose 
@@ -49,20 +49,28 @@ export default function Dashboard() {
       
       {/* Zone 1: The Action Center (Hero Section) */}
       <div className="container mx-auto px-4 pt-8 pb-6">
-        {/* Personalized Greeting */}
-        <h1 className="mb-6 text-2xl font-bold animate-fade-in">
-          {greeting}
-        </h1>
+        {/* Modern Hero Header */}
+        <HeroHeader
+          user={user}
+          medications={medications}
+          schedules={schedules}
+          todayLogs={todayLogs}
+          currentTime={currentTime}
+        />
         
-        {hasMedications ? (
-          <NextDoseCard 
-            nextDose={nextDose}
-            status={nextDoseStatus}
-            onDoseComplete={() => {
-              // Refresh will happen automatically via query invalidation
-            }}
-          />
-        ) : (
+        {hasMedications && nextDose && (
+          <div className="mt-6">
+            <NextDoseCard 
+              nextDose={nextDose}
+              status={nextDoseStatus}
+              onDoseComplete={() => {
+                // Refresh will happen automatically via query invalidation
+              }}
+            />
+          </div>
+        )}
+        
+        {!hasMedications && (
           <div className="rounded-lg border border-dashed p-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Camera className="h-8 w-8 text-primary" />
