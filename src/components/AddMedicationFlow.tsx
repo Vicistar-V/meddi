@@ -566,19 +566,35 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
                     </p>
                   </div>
                   
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleFileUpload}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      id="file-upload"
-                    />
-                    <Button className="w-full" size="lg">
-                      <Upload className="mr-2 h-5 w-5" />
-                      Scan Pharmacy Label
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="camera-upload"
+                      />
+                      <Button className="w-full" size="lg">
+                        <Camera className="mr-2 h-5 w-5" />
+                        Take Photo with Camera
+                      </Button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="gallery-upload"
+                      />
+                      <Button className="w-full" size="lg" variant="outline">
+                        <Upload className="mr-2 h-5 w-5" />
+                        Choose from Gallery
+                      </Button>
+                    </div>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
