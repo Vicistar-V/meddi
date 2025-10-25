@@ -88,11 +88,6 @@ export const CameraView = () => {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsStreaming(true);
-        
-        // Start analyzing every 3 seconds
-        analyzeIntervalRef.current = window.setInterval(() => {
-          captureAndAnalyze();
-        }, 3000);
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -228,11 +223,13 @@ export const CameraView = () => {
         <AlertTitle>How to use</AlertTitle>
         <AlertDescription className="space-y-2">
           <p>1. Click "Start Camera" to begin</p>
-          <p>2. Point your camera at a pill</p>
-          <p>3. AI analyzes automatically every 3 seconds</p>
-          <p>4. Click "Analyze Now" for instant identification</p>
+          <p>2. Point your camera at a pill and hold steady</p>
+          <p>3. Click "Analyze Now" when ready</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Note: Always verify pill identification with a pharmacist or doctor
+            💡 Tip: Each analysis uses AI credits, so analyze only when you have a clear view
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ⚠️ Always verify pill identification with a pharmacist or doctor
           </p>
         </AlertDescription>
       </Alert>
