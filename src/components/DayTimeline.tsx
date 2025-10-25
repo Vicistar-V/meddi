@@ -72,7 +72,7 @@ export const DayTimeline = ({
 
   // Group active doses by proximity
   const activeDoses = activeDosesList.map(item => item.dose);
-  const { now, next, later, overdue } = groupDosesByProximity(activeDoses, currentTime);
+  const { now, next, later, overdue } = groupDosesByProximity(activeDoses, todayLogs, currentTime);
 
   // Helper to find status for a dose
   const getStatusForDose = (dose: DoseGroup) => {

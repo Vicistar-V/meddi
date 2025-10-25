@@ -1,4 +1,5 @@
-import { DoseGroup } from './medicationHelpers';
+import { DoseGroup, getDoseStatus } from './medicationHelpers';
+import { MedicationLog } from '@/hooks/useMedications';
 
 /**
  * Get relative time string like "in 2 hours", "5 min ago", "now"
@@ -77,6 +78,7 @@ export function getTimeContext(scheduleTime: string, currentTime: Date = new Dat
  */
 export function groupDosesByProximity(
   doses: DoseGroup[],
+  todayLogs: MedicationLog[],
   currentTime: Date = new Date()
 ): {
   now: DoseGroup[];
@@ -92,18 +94,18 @@ export function groupDosesByProximity(
   };
 
   doses.forEach(dose => {
+    const scheduleIds = dose.schedules.map(s => s.schedule.id);
+    const status = getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
+    
+    // Skip completed doses entirely
+    if (status === 'completed') {
+      return;
+    }
+    
     const context = getTimeContext(dose.time, currentTime);
     
-    // Check if dose is overdue (past scheduled time + grace period)
-    const [hours, minutes] = dose.time.split(':').map(Number);
-    const scheduleDate = new Date(currentTime);
-    scheduleDate.setHours(hours, minutes, 0, 0);
-    
-    const diffMs = currentTime.getTime() - scheduleDate.getTime();
-    const diffMinutes = Math.round(diffMs / (1000 * 60));
-    
-    // If more than 30 minutes past scheduled time, it's overdue
-    if (diffMinutes > 30) {
+    // Check if dose is overdue based on status
+    if (status === 'missed') {
       groups.overdue.push(dose);
     } else {
       groups[context].push(dose);
