@@ -74,73 +74,155 @@ serve(async (req) => {
     const mimeType = image_path.endsWith('.png') ? 'image/png' : 'image/jpeg';
     const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-    // Call Google Cloud Vision API
-    const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY');
-    if (!visionApiKey) {
-      console.error('Google Cloud Vision API key not configured');
+    // Call Lovable AI (Gemini 2.5 Flash) for intelligent OCR
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('Lovable AI API key not configured');
       return new Response(
-        JSON.stringify({ error: 'OCR service not configured' }),
+        JSON.stringify({ error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Calling Google Cloud Vision API for OCR...');
-    const visionResponse = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requests: [
-            {
-              image: {
-                content: base64Image,
-              },
-              features: [
-                {
-                  type: 'TEXT_DETECTION',
-                  maxResults: 1,
-                },
-              ],
-            },
-          ],
-        }),
+    console.log('Calling Lovable AI (Gemini 2.5 Flash) for intelligent medication extraction...');
+
+    const structuredPrompt = `You are an expert at reading pharmacy prescription labels and pill bottle labels.
+
+Analyze the image and extract ALL medications listed. For each medication, extract:
+- medicationName: The drug name (e.g., "Lisinopril", "Betaloc", "Metformin")
+- dosage: The strength with unit (e.g., "100mg", "20 mcg", "500mg")
+- quantityInstruction: How much to take (e.g., "Take one tablet", "2 tabs", "1 capsule")
+- frequencyInstruction: How often (e.g., "twice daily", "once daily", "three times daily")
+
+Common medical abbreviations to interpret:
+- BID = twice daily
+- TID = three times daily  
+- QID = four times daily
+- QD or once daily = once daily
+- PRN = as needed
+- PO = by mouth
+
+Return ONLY a valid JSON array with this exact structure (no markdown, no code blocks, no explanations):
+[
+  {
+    "medicationName": "string",
+    "dosage": "string",
+    "quantityInstruction": "string",
+    "frequencyInstruction": "string"
+  }
+]
+
+If no medications are found, return an empty array: []
+
+Be precise and extract only the information that is clearly visible on the label.`;
+
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: structuredPrompt },
+              { type: 'image_url', image_url: { url: dataUrl } }
+            ]
+          }
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      
+      // Handle specific error codes with user-friendly messages
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            medications: [],
+            error: 'Rate limit exceeded. Please try again in a moment.',
+            error_code: 'RATE_LIMIT'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    );
+      
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            medications: [],
+            error: 'AI quota exceeded. Please add credits or use manual entry.',
+            error_code: 'PAYMENT_REQUIRED'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    if (!visionResponse.ok) {
-      const errorText = await visionResponse.text();
-      console.error('Google Cloud Vision error:', visionResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ error: 'OCR processing failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const visionData = await visionResponse.json();
-    console.log('Google Cloud Vision response received');
-
-    const detectedText = visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
-    console.log('Detected text length:', detectedText.length);
-
-    if (!detectedText) {
       return new Response(
         JSON.stringify({ 
           medications: [],
-          raw_text: '',
-          error: 'No text detected in image'
+          error: 'OCR processing failed. Please try manual entry.',
+          error_code: 'AI_ERROR'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse the text to extract multiple medications
-    const parsed = parseMedicationInfo(detectedText);
+    const aiData = await aiResponse.json();
+    console.log('Lovable AI response received');
+
+    const aiContent = aiData.choices?.[0]?.message?.content || '[]';
+    console.log('AI extracted content:', aiContent);
+
+    // Define the medication type
+    interface ExtractedMedication {
+      name: string;
+      dosage: string;
+      instructions: string;
+    }
+
+    // Parse the AI response to extract medications array
+    let medications: ExtractedMedication[] = [];
+    try {
+      // Clean the response - remove markdown code blocks if present
+      let cleanedContent = aiContent.trim();
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const parsedData = JSON.parse(cleanedContent);
+      
+      // Validate and transform the data structure
+      if (Array.isArray(parsedData)) {
+        medications = parsedData.map((med: any) => ({
+          name: med.medicationName || med.name || '',
+          dosage: med.dosage || '',
+          instructions: `${med.quantityInstruction || ''} ${med.frequencyInstruction || ''}`.trim() || 'As directed'
+        })).filter((med: ExtractedMedication) => med.name && med.dosage);
+        
+        console.log(`Successfully extracted ${medications.length} medication(s)`);
+      } else {
+        console.error('AI response is not an array:', parsedData);
+        medications = [];
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      console.error('Raw content:', aiContent);
+      medications = [];
+    }
 
     return new Response(
-      JSON.stringify(parsed),
+      JSON.stringify({ 
+        medications,
+        raw_text: aiContent
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -164,132 +246,4 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   }
   
   return btoa(binary);
-}
-
-interface ParsedMedication {
-  name: string;
-  dosage: string;
-  instructions: string;
-}
-
-function parseMedicationInfo(text: string): {
-  medications: ParsedMedication[];
-  raw_text: string;
-} {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const medications: ParsedMedication[] = [];
-
-  // Common medication line patterns:
-  // "Betaloc 100mg - 1 tab BID"
-  // "Cimetidine 50 mg - 2 tabs TID"
-  // "Aspirin 81mg daily"
-  const medicationLinePattern = /^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(\d+\.?\d*\s*(?:mg|mcg|g|ml|%))\s*[-–—:]?\s*(.+)$/i;
-  
-  // Alternative pattern: medication name on one line, dosage/instructions on next
-  const namePattern = /^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s*$/;
-  const dosagePattern = /(\d+\.?\d*\s*(?:mg|mcg|g|ml|%))/i;
-
-  // Skip non-medication header lines
-  const skipPatterns = [
-    /^(rx|prescription|patient|doctor|dr\.|pharmacy|date|refill|sig|disp|quantity)/i,
-    /^(name|dob|address|phone|instructions)/i,
-    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // dates
-  ];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    // Skip header/non-medication lines
-    if (skipPatterns.some(pattern => pattern.test(line))) {
-      continue;
-    }
-
-    // Try to match full medication line with dosage and instructions
-    const fullMatch = line.match(medicationLinePattern);
-    if (fullMatch) {
-      medications.push({
-        name: fullMatch[1].trim(),
-        dosage: fullMatch[2].trim(),
-        instructions: fullMatch[3].trim() || 'As directed'
-      });
-      continue;
-    }
-
-    // Try to match medication name, then look ahead for dosage/instructions
-    const nameMatch = line.match(namePattern);
-    if (nameMatch && line.length >= 3 && line.length <= 50) {
-      const name = nameMatch[1].trim();
-      let dosage = '';
-      let instructions = '';
-
-      // Look at next 2 lines for dosage and instructions
-      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
-        const nextLine = lines[j];
-        
-        // Found dosage
-        const dosageMatch = nextLine.match(dosagePattern);
-        if (dosageMatch && !dosage) {
-          dosage = dosageMatch[1].trim();
-          // Rest of line might be instructions
-          const instructionPart = nextLine.replace(dosagePattern, '').replace(/^[-–—:]\s*/, '').trim();
-          if (instructionPart.length > 5) {
-            instructions = instructionPart;
-          }
-        } else if (!instructions && nextLine.length > 5 && nextLine.length < 200) {
-          // Might be instructions line
-          const lowerNext = nextLine.toLowerCase();
-          if (lowerNext.includes('take') || lowerNext.includes('tab') || 
-              lowerNext.includes('daily') || lowerNext.includes('times')) {
-            instructions = nextLine;
-          }
-        }
-      }
-
-      // Only add if we found at least a dosage
-      if (dosage) {
-        medications.push({
-          name,
-          dosage,
-          instructions: instructions || 'As directed'
-        });
-        i += 2; // Skip the lines we just processed
-      }
-    }
-  }
-
-  // If no structured medications found, try a more lenient approach
-  if (medications.length === 0) {
-    for (const line of lines) {
-      if (skipPatterns.some(pattern => pattern.test(line))) continue;
-      
-      // Find any line with a dosage
-      const dosageMatch = line.match(dosagePattern);
-      if (dosageMatch) {
-        // Extract name (words before dosage)
-        const beforeDosage = line.substring(0, line.indexOf(dosageMatch[0])).trim();
-        const afterDosage = line.substring(line.indexOf(dosageMatch[0]) + dosageMatch[0].length).trim();
-        
-        if (beforeDosage.length >= 3 && beforeDosage.length <= 50) {
-          medications.push({
-            name: beforeDosage,
-            dosage: dosageMatch[0].trim(),
-            instructions: afterDosage.replace(/^[-–—:]\s*/, '').trim() || 'As directed'
-          });
-        }
-      }
-    }
-  }
-
-  // Remove duplicates based on name
-  const uniqueMedications = medications.reduce((acc, med) => {
-    if (!acc.find(m => m.name.toLowerCase() === med.name.toLowerCase())) {
-      acc.push(med);
-    }
-    return acc;
-  }, [] as ParsedMedication[]);
-
-  return {
-    medications: uniqueMedications,
-    raw_text: text
-  };
 }

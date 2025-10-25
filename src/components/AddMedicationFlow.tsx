@@ -117,6 +117,23 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
 
       if (ocrError) throw ocrError;
 
+      // Handle specific error codes from OCR processor
+      if (ocrData?.error_code) {
+        let errorMessage = ocrData.error;
+        if (ocrData.error_code === 'RATE_LIMIT') {
+          errorMessage = 'Too many requests. Please try again in a moment.';
+        } else if (ocrData.error_code === 'PAYMENT_REQUIRED') {
+          errorMessage = 'AI quota exceeded. Please try manual entry.';
+        }
+        
+        toast({
+          variant: 'destructive',
+          title: 'Scanning failed',
+          description: errorMessage
+        });
+        return;
+      }
+
       if (ocrData?.medications && ocrData.medications.length > 0) {
         const medications: ScannedMedication[] = ocrData.medications.map((med: any, idx: number) => ({
           id: `${Date.now()}-${idx}`,
@@ -138,7 +155,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
         toast({
           variant: 'destructive',
           title: 'No medications detected',
-          description: 'Please try another image or enter manually'
+          description: 'Please try another label or enter manually'
         });
       }
     } catch (error: any) {
@@ -549,7 +566,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
         <DialogHeader>
           <DialogTitle>Add New Medication</DialogTitle>
           <DialogDescription>
-            Scan a prescription or enter details manually
+            Scan a pharmacy pill bottle label or enter details manually
           </DialogDescription>
         </DialogHeader>
 
@@ -557,7 +574,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="scan">
               <Upload className="mr-2 h-4 w-4" />
-              Scan Prescription
+              Scan Pharmacy Label
             </TabsTrigger>
             <TabsTrigger value="manual">
               <FileText className="mr-2 h-4 w-4" />
@@ -570,7 +587,10 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
               <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <Label htmlFor="prescription-upload" className="cursor-pointer">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Upload prescription image</p>
+                  <p className="text-sm font-medium">Upload pharmacy pill bottle label</p>
+                  <p className="text-xs text-muted-foreground">
+                    Works best with printed pharmacy labels
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     PNG, JPG up to 10MB • Supports multiple medications
                   </p>
@@ -603,9 +623,9 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
             {isProcessingOCR && (
               <Alert>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertTitle>Processing prescription...</AlertTitle>
+                <AlertTitle>Processing label...</AlertTitle>
                 <AlertDescription>
-                  Extracting all medications from your prescription
+                  AI is extracting medication details from your pharmacy label
                 </AlertDescription>
               </Alert>
             )}
