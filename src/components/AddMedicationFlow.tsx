@@ -13,9 +13,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useMedications } from '@/hooks/useMedications';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertTriangle, Upload, FileText } from 'lucide-react';
+import { Loader2, AlertTriangle, Upload, FileText, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthProvider';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const medicationSchema = z.object({
   name: z.string().trim().min(1, 'Medication name is required').max(100, 'Name must be less than 100 characters'),
@@ -26,6 +27,15 @@ const medicationSchema = z.object({
 });
 
 type MedicationFormData = z.infer<typeof medicationSchema>;
+
+interface ScannedMedication {
+  id: string;
+  name: string;
+  dosage: string;
+  instructions: string;
+  selected: boolean;
+  isEditing: boolean;
+}
 
 interface AddMedicationFlowProps {
   open: boolean;
@@ -47,6 +57,10 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [interactions, setInteractions] = useState<any[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [scannedMedications, setScannedMedications] = useState<ScannedMedication[]>([]);
+  const [showReview, setShowReview] = useState(false);
+  const [scheduleTime, setScheduleTime] = useState('08:00');
+  const [scheduleDays, setScheduleDays] = useState<string[]>([]);
   const { addMedication, addSchedule } = useMedications();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -66,7 +80,6 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         variant: 'destructive',
@@ -76,7 +89,6 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         variant: 'destructive',
@@ -90,7 +102,6 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
     setIsProcessingOCR(true);
 
     try {
-      // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
       
@@ -98,28 +109,36 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
         .from('prescription_uploads')
         .upload(fileName, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // Call OCR processor
       const { data: ocrData, error: ocrError } = await supabase.functions.invoke('ocr-processor', {
         body: { image_path: fileName }
       });
 
-      if (ocrError) {
-        throw ocrError;
-      }
+      if (ocrError) throw ocrError;
 
-      // Populate form with OCR results
-      if (ocrData) {
-        form.setValue('name', ocrData.name || '');
-        form.setValue('dosage', ocrData.dosage || '');
-        form.setValue('instructions', ocrData.instructions || '');
+      if (ocrData?.medications && ocrData.medications.length > 0) {
+        const medications: ScannedMedication[] = ocrData.medications.map((med: any, idx: number) => ({
+          id: `${Date.now()}-${idx}`,
+          name: med.name,
+          dosage: med.dosage,
+          instructions: med.instructions,
+          selected: true,
+          isEditing: false
+        }));
+
+        setScannedMedications(medications);
+        setShowReview(true);
         
         toast({
-          title: 'Prescription scanned!',
-          description: 'Please review and edit the extracted information'
+          title: `Found ${medications.length} medication${medications.length > 1 ? 's' : ''}!`,
+          description: 'Review and edit before adding'
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'No medications detected',
+          description: 'Please try another image or enter manually'
         });
       }
     } catch (error: any) {
@@ -134,25 +153,130 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
     }
   };
 
+  const toggleMedicationSelection = (id: string) => {
+    setScannedMedications(prev =>
+      prev.map(med => med.id === id ? { ...med, selected: !med.selected } : med)
+    );
+  };
+
+  const toggleMedicationEdit = (id: string) => {
+    setScannedMedications(prev =>
+      prev.map(med => med.id === id ? { ...med, isEditing: !med.isEditing } : med)
+    );
+  };
+
+  const updateMedication = (id: string, field: keyof ScannedMedication, value: string) => {
+    setScannedMedications(prev =>
+      prev.map(med => med.id === id ? { ...med, [field]: value } : med)
+    );
+  };
+
+  const removeMedication = (id: string) => {
+    setScannedMedications(prev => prev.filter(med => med.id !== id));
+  };
+
+  const handleAddSelectedMedications = async () => {
+    const selected = scannedMedications.filter(med => med.selected);
+    
+    if (selected.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No medications selected',
+        description: 'Please select at least one medication'
+      });
+      return;
+    }
+
+    if (scheduleDays.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No days selected',
+        description: 'Please select at least one day'
+      });
+      return;
+    }
+
+    setIsChecking(true);
+
+    try {
+      // Check interactions for all selected medications
+      const allInteractions: any[] = [];
+      for (const med of selected) {
+        const { data: interactionData } = await supabase.functions.invoke('drug-interaction-checker', {
+          body: { medication_name: med.name }
+        });
+
+        if (interactionData?.interactions && interactionData.interactions.length > 0) {
+          allInteractions.push(...interactionData.interactions);
+        }
+      }
+
+      if (allInteractions.length > 0) {
+        setInteractions(allInteractions);
+        setIsChecking(false);
+        return;
+      }
+
+      // Add all medications
+      for (const med of selected) {
+        const medication = await addMedication.mutateAsync({
+          name: med.name,
+          dosage: med.dosage,
+          instructions: med.instructions || null,
+          pill_image_url: null
+        });
+
+        await addSchedule.mutateAsync({
+          medication_id: medication.id,
+          time_to_take: scheduleTime,
+          days_of_week: scheduleDays
+        });
+      }
+
+      toast({
+        title: `${selected.length} medication${selected.length > 1 ? 's' : ''} added`,
+        description: 'Your medications have been added successfully'
+      });
+
+      resetFlow();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to add medications'
+      });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const resetFlow = () => {
+    setScannedMedications([]);
+    setShowReview(false);
+    setUploadedFile(null);
+    setScheduleTime('08:00');
+    setScheduleDays([]);
+    setInteractions([]);
+    form.reset();
+    onOpenChange(false);
+  };
+
   const onSubmit = async (data: MedicationFormData) => {
     try {
       setIsChecking(true);
       
-      // Check for drug interactions
       const { data: interactionData, error: interactionError } = await supabase.functions.invoke('drug-interaction-checker', {
         body: { medication_name: data.name }
       });
 
       if (interactionError) {
         console.error('Interaction check failed:', interactionError);
-        // Continue anyway - we don't want to block medication addition if the API fails
       } else if (interactionData?.interactions && interactionData.interactions.length > 0) {
         setInteractions(interactionData.interactions);
         setIsChecking(false);
-        return; // Show warnings first
+        return;
       }
 
-      // Add medication
       const medication = await addMedication.mutateAsync({
         name: data.name,
         dosage: data.dosage,
@@ -160,7 +284,6 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
         pill_image_url: null
       });
 
-      // Add schedule
       await addSchedule.mutateAsync({
         medication_id: medication.id,
         time_to_take: data.time_to_take,
@@ -172,9 +295,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
         description: 'Your medication has been added successfully'
       });
 
-      form.reset();
-      setInteractions([]);
-      onOpenChange(false);
+      resetFlow();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -187,30 +308,53 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   };
 
   const handleConfirmWithInteractions = async () => {
-    const data = form.getValues();
+    const selected = scannedMedications.filter(med => med.selected);
+    
     try {
-      // Add medication despite warnings
-      const medication = await addMedication.mutateAsync({
-        name: data.name,
-        dosage: data.dosage,
-        instructions: data.instructions || null,
-        pill_image_url: null
-      });
+      if (selected.length > 0) {
+        // Batch add from scan
+        for (const med of selected) {
+          const medication = await addMedication.mutateAsync({
+            name: med.name,
+            dosage: med.dosage,
+            instructions: med.instructions || null,
+            pill_image_url: null
+          });
 
-      await addSchedule.mutateAsync({
-        medication_id: medication.id,
-        time_to_take: data.time_to_take,
-        days_of_week: data.days_of_week
-      });
+          await addSchedule.mutateAsync({
+            medication_id: medication.id,
+            time_to_take: scheduleTime,
+            days_of_week: scheduleDays
+          });
+        }
 
-      toast({
-        title: 'Medication added',
-        description: 'Your medication has been added. Please consult your doctor about the warnings.'
-      });
+        toast({
+          title: `${selected.length} medication${selected.length > 1 ? 's' : ''} added`,
+          description: 'Please consult your doctor about the warnings.'
+        });
+      } else {
+        // Single manual add
+        const data = form.getValues();
+        const medication = await addMedication.mutateAsync({
+          name: data.name,
+          dosage: data.dosage,
+          instructions: data.instructions || null,
+          pill_image_url: null
+        });
 
-      form.reset();
-      setInteractions([]);
-      onOpenChange(false);
+        await addSchedule.mutateAsync({
+          medication_id: medication.id,
+          time_to_take: data.time_to_take,
+          days_of_week: data.days_of_week
+        });
+
+        toast({
+          title: 'Medication added',
+          description: 'Please consult your doctor about the warnings.'
+        });
+      }
+
+      resetFlow();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -255,6 +399,150 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
     );
   }
 
+  if (showReview && scannedMedications.length > 0) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review Detected Medications</DialogTitle>
+            <DialogDescription>
+              {scannedMedications.filter(m => m.selected).length} of {scannedMedications.length} selected
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Medication</TableHead>
+                    <TableHead>Dosage</TableHead>
+                    <TableHead>Instructions</TableHead>
+                    <TableHead className="w-24">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {scannedMedications.map((med) => (
+                    <TableRow key={med.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={med.selected}
+                          onCheckedChange={() => toggleMedicationSelection(med.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {med.isEditing ? (
+                          <Input
+                            value={med.name}
+                            onChange={(e) => updateMedication(med.id, 'name', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="font-medium">{med.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {med.isEditing ? (
+                          <Input
+                            value={med.dosage}
+                            onChange={(e) => updateMedication(med.id, 'dosage', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          med.dosage
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {med.isEditing ? (
+                          <Input
+                            value={med.instructions}
+                            onChange={(e) => updateMedication(med.id, 'instructions', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{med.instructions}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => toggleMedicationEdit(med.id)}
+                          >
+                            {med.isEditing ? <CheckCircle2 className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => removeMedication(med.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+              <div>
+                <Label>Time to Take (for all selected)</Label>
+                <Input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Days of Week (for all selected)</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {daysOfWeek.map((day) => (
+                    <div key={day.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={scheduleDays.includes(day.value)}
+                        onCheckedChange={(checked) => {
+                          setScheduleDays(prev =>
+                            checked
+                              ? [...prev, day.value]
+                              : prev.filter(d => d !== day.value)
+                          );
+                        }}
+                      />
+                      <Label className="font-normal cursor-pointer text-sm">{day.label}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowReview(false)}>
+                Back to Upload
+              </Button>
+              <Button onClick={handleAddSelectedMedications} disabled={isChecking}>
+                {isChecking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  `Add ${scannedMedications.filter(m => m.selected).length} Selected`
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -265,7 +553,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="manual" className="w-full">
+        <Tabs defaultValue="scan" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="scan">
               <Upload className="mr-2 h-4 w-4" />
@@ -284,7 +572,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Upload prescription image</p>
                   <p className="text-xs text-muted-foreground">
-                    PNG, JPG up to 10MB
+                    PNG, JPG up to 10MB • Supports multiple medications
                   </p>
                 </div>
                 <Input
@@ -317,7 +605,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <AlertTitle>Processing prescription...</AlertTitle>
                 <AlertDescription>
-                  Using AI to extract medication information from your image
+                  Extracting all medications from your prescription
                 </AlertDescription>
               </Alert>
             )}
