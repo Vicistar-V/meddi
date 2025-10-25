@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Clock, Sparkles, CheckCircle2, Calendar, AlertCircle } from 'lucide-react';
 import { DoseGroup, getDoseStatus } from '@/lib/medicationHelpers';
-import { MedicationLog } from '@/hooks/useMedications';
+import { MedicationLog, useMedications } from '@/hooks/useMedications';
 import { groupDosesByProximity } from '@/lib/timeHelpers';
 import { DailyProgress } from '@/components/timeline/DailyProgress';
 import { TimelineSection } from '@/components/timeline/TimelineSection';
@@ -9,6 +9,7 @@ import { DoseCard } from '@/components/timeline/DoseCard';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface DayTimelineProps {
   dosesTimeline: Map<string, DoseGroup[]>;
@@ -24,6 +25,8 @@ export const DayTimeline = ({
   onDoseComplete
 }: DayTimelineProps) => {
   const [completedOpen, setCompletedOpen] = useState(false);
+  const { logMedication } = useMedications();
+  const { toast } = useToast();
 
   // Get all doses in a flat array
   const allDoses = Array.from(dosesTimeline.values()).flat();
@@ -82,8 +85,27 @@ export const DayTimeline = ({
 
   // Handle marking a dose as taken
   const handleMarkTaken = async (dose: DoseGroup) => {
-    // This will be handled by parent component via onDoseComplete
-    onDoseComplete?.();
+    try {
+      await Promise.all(
+        dose.schedules.map(item =>
+          logMedication.mutateAsync({
+            schedule_id: item.schedule.id,
+            status: 'taken',
+          })
+        )
+      );
+      toast({ 
+        title: 'Dose logged', 
+        description: 'Great job staying on track!' 
+      });
+      onDoseComplete?.();
+    } catch (error) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: 'Failed to log dose. Please try again.' 
+      });
+    }
   };
 
   // Check if all doses are completed
