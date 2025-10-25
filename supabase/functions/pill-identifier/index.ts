@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -124,7 +123,7 @@ Rules:
     console.error('Error in pill-identifier:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'An unexpected error occurred',
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
         identified: false,
         name: 'Unknown',
         confidence: 0
