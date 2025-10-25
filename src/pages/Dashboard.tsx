@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TodaySchedule } from '@/components/TodaySchedule';
 import { AddMedicationFlow } from '@/components/AddMedicationFlow';
+import { MedicationsList } from '@/components/MedicationsList';
 import { Plus, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -60,13 +61,23 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>Today's Schedule</CardTitle>
             <CardDescription>Your medication schedule for today</CardDescription>
           </CardHeader>
           <CardContent>
             <TodaySchedule />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>My Medications</CardTitle>
+            <CardDescription>Manage all your medications</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MedicationsList />
           </CardContent>
         </Card>
 

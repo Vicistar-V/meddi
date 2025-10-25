@@ -104,12 +104,37 @@ export const useMedications = () => {
     }
   });
 
+  const deleteMedication = useMutation({
+    mutationFn: async (medicationId: string) => {
+      // First delete related schedules
+      const { error: scheduleError } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('medication_id', medicationId);
+      
+      if (scheduleError) throw scheduleError;
+
+      // Then delete the medication
+      const { error } = await supabase
+        .from('medications')
+        .delete()
+        .eq('id', medicationId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medications'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    }
+  });
+
   return {
     medications,
     schedules,
     isLoading,
     addMedication,
     addSchedule,
-    logMedication
+    logMedication,
+    deleteMedication
   };
 };
