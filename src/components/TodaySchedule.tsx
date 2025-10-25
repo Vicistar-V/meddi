@@ -3,7 +3,7 @@ import { PillCard } from './PillCard';
 import { useToast } from '@/hooks/use-toast';
 
 export const TodaySchedule = () => {
-  const { medications, schedules, logMedication } = useMedications();
+  const { medications, schedules, todayLogs, logMedication } = useMedications();
   const { toast } = useToast();
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
@@ -14,9 +14,14 @@ export const TodaySchedule = () => {
 
   const scheduledMedications = todaySchedules.map(schedule => {
     const medication = medications.find(m => m.id === schedule.medication_id);
+    
+    // Check if this schedule has been logged today
+    const hasBeenTakenToday = todayLogs.some(log => log.schedule_id === schedule.id);
+    
     return {
       schedule,
-      medication
+      medication,
+      status: hasBeenTakenToday ? ('taken' as const) : ('upcoming' as const)
     };
   }).filter(item => item.medication);
 
@@ -65,13 +70,13 @@ export const TodaySchedule = () => {
         <div key={timeOfDay}>
           <h3 className="mb-3 text-lg font-semibold">{timeOfDay}</h3>
           <div className="space-y-3">
-            {items.map(({ schedule, medication }) => (
+            {items.map(({ schedule, medication, status }) => (
               <PillCard
                 key={schedule.id}
                 medicationName={medication!.name}
                 dosage={medication!.dosage}
                 time={schedule.time_to_take}
-                status="upcoming"
+                status={status}
                 onMarkTaken={() => handleMarkTaken(schedule.id)}
               />
             ))}

@@ -59,6 +59,24 @@ export const useMedications = () => {
     enabled: !!user
   });
 
+  const { data: todayLogs = [] } = useQuery({
+    queryKey: ['medication-logs', user?.id, new Date().toDateString()],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data, error } = await supabase
+        .from('medication_logs')
+        .select('*')
+        .gte('taken_at', today.toISOString())
+        .eq('status', 'taken');
+      
+      if (error) throw error;
+      return data as MedicationLog[];
+    },
+    enabled: !!user
+  });
+
   const addMedication = useMutation({
     mutationFn: async (medication: Omit<Medication, 'id' | 'created_at' | 'user_id'>) => {
       const { data, error } = await supabase
@@ -101,6 +119,9 @@ export const useMedications = () => {
       
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medication-logs'] });
     }
   });
 
@@ -131,6 +152,7 @@ export const useMedications = () => {
   return {
     medications,
     schedules,
+    todayLogs,
     isLoading,
     addMedication,
     addSchedule,
