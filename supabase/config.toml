@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.ocr-processor]
 verify_jwt = true
+
+[functions.pill-identifier]
+verify_jwt = true

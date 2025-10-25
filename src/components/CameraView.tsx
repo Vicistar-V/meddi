@@ -1,30 +1,84 @@
-import { useEffect, useRef, useState } from 'react';
-import * as tf from '@tensorflow/tfjs';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, CameraOff, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Camera, CameraOff, Loader2, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface PillIdentification {
+  identified: boolean;
+  name: string;
+  confidence: number;
+  description?: string;
+  warning?: string;
+}
 
 export const CameraView = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [prediction, setPrediction] = useState<string | null>(null);
-  const [confidence, setConfidence] = useState<number | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<PillIdentification | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationRef = useRef<number | null>(null);
+  const analyzeIntervalRef = useRef<number>();
+
+  const captureAndAnalyze = async () => {
+    if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to base64
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+    setIsAnalyzing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('pill-identifier', {
+        body: { image: imageData }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      if (data) {
+        setResult(data);
+        if (data.identified && data.confidence > 0.7) {
+          console.log('Pill identified:', data.name, 'Confidence:', data.confidence);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error analyzing pill:', error);
+      if (error?.message?.includes('Rate limit')) {
+        toast.error('Rate limit exceeded. Please wait before analyzing again.');
+      } else if (error?.message?.includes('credits')) {
+        toast.error('AI credits exhausted. Please add credits to continue.');
+      } else {
+        toast.error('Failed to analyze pill image');
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const startCamera = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
+        video: {
+          facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
@@ -33,17 +87,16 @@ export const CameraView = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        setIsStreaming(true);
         
-        videoRef.current.onloadedmetadata = () => {
-          setIsStreaming(true);
-          setIsLoading(false);
-          startPredictionLoop();
-        };
+        // Start analyzing every 3 seconds
+        analyzeIntervalRef.current = window.setInterval(() => {
+          captureAndAnalyze();
+        }, 3000);
       }
-    } catch (err) {
-      console.error('Camera access error:', err);
-      setError('Unable to access camera. Please grant camera permissions.');
-      setIsLoading(false);
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+      toast.error("Failed to access camera. Please check permissions.");
     }
   };
 
@@ -56,79 +109,20 @@ export const CameraView = () => {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
+    
+    if (analyzeIntervalRef.current) {
+      clearInterval(analyzeIntervalRef.current);
     }
-
+    
     setIsStreaming(false);
-    setPrediction(null);
-    setConfidence(null);
-  };
-
-  const startPredictionLoop = async () => {
-    // Initialize TensorFlow.js
-    await tf.ready();
-    
-    // Note: In a production app, you would load a trained model here
-    // const model = await tf.loadGraphModel('/path/to/model.json');
-    
-    const predict = async () => {
-      if (!videoRef.current || !isStreaming) return;
-
-      try {
-        // Capture frame from video
-        const video = videoRef.current;
-        
-        // Create tensor from video frame
-        const tensor = tf.browser.fromPixels(video)
-          .resizeNearestNeighbor([224, 224]) // Resize to model input size
-          .toFloat()
-          .div(255.0) // Normalize
-          .expandDims();
-
-        // In production, you would run: const predictions = await model.predict(tensor);
-        // For demo purposes, we'll simulate a prediction
-        simulatePrediction();
-
-        // Clean up
-        tensor.dispose();
-      } catch (err) {
-        console.error('Prediction error:', err);
-      }
-
-      animationRef.current = requestAnimationFrame(predict);
-    };
-
-    predict();
-  };
-
-  // Simulates a pill recognition (in production, this would be real ML prediction)
-  const simulatePrediction = () => {
-    // This is a placeholder - in production you'd have a trained model
-    const mockPills = [
-      { name: 'Lisinopril 10mg', confidence: 0.92 },
-      { name: 'Metformin 500mg', confidence: 0.88 },
-      { name: 'Aspirin 81mg', confidence: 0.85 },
-      { name: 'Unknown Pill', confidence: 0.45 }
-    ];
-
-    // Randomly select one for demo
-    const randomPill = mockPills[Math.floor(Math.random() * mockPills.length)];
-    
-    // Only show predictions with confidence > 0.7
-    if (randomPill.confidence > 0.7) {
-      setPrediction(randomPill.name);
-      setConfidence(randomPill.confidence);
-    } else {
-      setPrediction('No pill detected');
-      setConfidence(null);
-    }
+    setResult(null);
   };
 
   useEffect(() => {
     return () => {
+      if (analyzeIntervalRef.current) {
+        clearInterval(analyzeIntervalRef.current);
+      }
       stopCamera();
     };
   }, []);
@@ -139,27 +133,19 @@ export const CameraView = () => {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>AI Pill Recognition</AlertTitle>
         <AlertDescription>
-          Point your camera at a pill for real-time identification. 
-          Note: This is a demo implementation. A production version would use a trained TensorFlow.js model.
+          Point your camera at a pill for real-time identification using Lovable AI vision.
         </AlertDescription>
       </Alert>
 
-      <Card className="overflow-hidden">
+      <Card className="relative overflow-hidden">
         <div className="relative aspect-video bg-muted">
-          {!isStreaming && !isLoading && (
+          {!isStreaming && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
               <Camera className="h-16 w-16 mb-4 text-muted-foreground" />
               <p className="text-lg font-medium mb-2">Camera Not Active</p>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground">
                 Click the button below to start pill identification
               </p>
-            </div>
-          )}
-
-          {isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Loader2 className="h-16 w-16 animate-spin text-primary" />
-              <p className="mt-4 text-sm text-muted-foreground">Starting camera...</p>
             </div>
           )}
 
@@ -170,56 +156,84 @@ export const CameraView = () => {
             muted
             className={`w-full h-full object-cover ${!isStreaming ? 'hidden' : ''}`}
           />
-
-          <canvas
-            ref={canvasRef}
-            className="hidden"
-          />
-
-          {prediction && isStreaming && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-              <div className="text-white">
-                <p className="text-lg font-semibold">{prediction}</p>
-                {confidence && (
-                  <p className="text-sm opacity-90">
-                    Confidence: {(confidence * 100).toFixed(1)}%
+          <canvas ref={canvasRef} className="hidden" />
+          
+          {isAnalyzing && isStreaming && (
+            <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Analyzing...
+            </div>
+          )}
+          
+          {result && isStreaming && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+              {result.identified ? (
+                <div className="space-y-2 text-white">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-lg">{result.name}</p>
+                    <span className="text-sm opacity-90">
+                      {(result.confidence * 100).toFixed(0)}% confident
+                    </span>
+                  </div>
+                  {result.description && (
+                    <p className="text-sm opacity-80">{result.description}</p>
+                  )}
+                  {result.warning && (
+                    <p className="text-xs text-orange-300 mt-2">
+                      ⚠️ {result.warning}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-white">
+                  <p className="text-sm opacity-90">Unable to identify pill</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {result.description || "Try adjusting the angle or lighting"}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </Card>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex gap-3">
         {!isStreaming ? (
-          <Button onClick={startCamera} disabled={isLoading} className="w-full">
+          <Button onClick={startCamera} className="flex-1">
             <Camera className="mr-2 h-4 w-4" />
-            {isLoading ? 'Starting...' : 'Start Camera'}
+            Start Camera
           </Button>
         ) : (
-          <Button onClick={stopCamera} variant="destructive" className="w-full">
-            <CameraOff className="mr-2 h-4 w-4" />
-            Stop Camera
-          </Button>
+          <>
+            <Button onClick={stopCamera} variant="destructive" className="flex-1">
+              <CameraOff className="mr-2 h-4 w-4" />
+              Stop Camera
+            </Button>
+            <Button
+              onClick={captureAndAnalyze}
+              disabled={isAnalyzing}
+              variant="secondary"
+            >
+              {isAnalyzing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Analyze Now"
+              )}
+            </Button>
+          </>
         )}
       </div>
-
+      
       <Alert>
         <AlertTitle>How to use</AlertTitle>
         <AlertDescription className="space-y-2">
           <p>1. Click "Start Camera" to begin</p>
           <p>2. Point your camera at a pill</p>
-          <p>3. Hold steady for best results</p>
-          <p>4. The AI will identify the pill in real-time</p>
+          <p>3. AI analyzes automatically every 3 seconds</p>
+          <p>4. Click "Analyze Now" for instant identification</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Note: Always verify pill identification with a pharmacist or doctor
+          </p>
         </AlertDescription>
       </Alert>
     </div>
