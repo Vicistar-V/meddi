@@ -35,10 +35,10 @@ export const DoseCard = ({
 
   // Status-based styling
   const cardStyles = {
-    completed: "border-green-500/50 bg-green-50/50 dark:bg-green-950/20 hover:border-green-500/70",
-    current: "border-primary bg-primary/5 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 ring-2 ring-primary/20",
-    upcoming: "border-border bg-card hover:border-primary/30 hover:shadow-md",
-    missed: "border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20 hover:border-orange-500/70"
+    completed: "border-green-500/50 bg-gradient-to-br from-green-50/70 to-emerald-50/70 dark:bg-green-950/20 hover:border-green-500/70 shadow-cream",
+    current: "border-primary bg-gradient-cream shadow-lg shadow-warm hover:shadow-xl hover:shadow-primary/30 ring-2 ring-primary/20",
+    upcoming: "border-border bg-gradient-cream hover:border-primary/30 hover:shadow-md shadow-cream",
+    missed: "border-orange-500/50 bg-gradient-to-br from-orange-50/70 to-amber-50/70 dark:bg-orange-950/20 hover:border-orange-500/70 shadow-cream"
   };
 
   const iconStyles = {

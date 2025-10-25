@@ -42,7 +42,7 @@ export const MedicationsList = () => {
 
   if (medications.length === 0) {
     return (
-      <Card className="p-6">
+      <Card className="p-6 bg-gradient-cream">
         <div className="text-center text-muted-foreground">
           <Pill className="w-12 h-12 mx-auto mb-2 opacity-50" />
           <p>No medications added yet</p>
@@ -57,7 +57,7 @@ export const MedicationsList = () => {
         {medications.map((med) => {
           const medSchedules = getMedicationSchedules(med.id);
           return (
-            <Card key={med.id} className="p-4">
+            <Card key={med.id} className="p-4 bg-gradient-cream hover:shadow-warm transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground">{med.name}</h3>

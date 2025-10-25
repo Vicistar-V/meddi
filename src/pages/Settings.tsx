@@ -56,7 +56,7 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card className="bg-gradient-cream">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
@@ -96,7 +96,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-cream">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-primary" />
@@ -113,7 +113,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-cream">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />

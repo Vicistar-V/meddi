@@ -406,7 +406,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   if (flowState === 'CONFIRMATION') {
     return (
       <Dialog open={open} onOpenChange={resetAndClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-cream">
           <DialogHeader>
             <DialogTitle>Confirm Medication Details</DialogTitle>
             <DialogDescription>
@@ -532,7 +532,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   // Render: IDLE, UPLOADING, PROCESSING States
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-gradient-cream">
         {(flowState === 'UPLOADING' || flowState === 'PROCESSING') && (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

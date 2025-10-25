@@ -41,7 +41,7 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
 
   if (!nextDose) {
     return (
-      <Card className="border-2 border-green-500/20 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+      <Card className="border-2 border-green-500/20 bg-gradient-to-br from-green-50/80 to-emerald-50/80 backdrop-blur-sm dark:from-green-950/20 dark:to-emerald-950/20">
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 animate-scale-in">
             <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
@@ -134,10 +134,10 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
 
   return (
     <Card className={cn(
-      'border-2 transition-all duration-500',
-      status === 'missed' && !isCompleting && 'border-orange-500 bg-orange-50 dark:bg-orange-950/20 ring-2 ring-orange-500/20',
-      isCompleting && 'border-green-500 bg-green-50 dark:bg-green-950/20',
-      !isCompleting && status !== 'missed' && 'border-primary/20 hover:border-primary/40'
+      'border-2 transition-all duration-500 backdrop-blur-sm',
+      status === 'missed' && !isCompleting && 'border-orange-500 bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:bg-orange-950/20 ring-2 ring-orange-500/20',
+      isCompleting && 'border-green-500 bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:bg-green-950/20',
+      !isCompleting && status !== 'missed' && 'border-primary/20 hover:border-primary/40 bg-gradient-cream'
     )}>
       <CardHeader>
         <CardTitle className={cn(

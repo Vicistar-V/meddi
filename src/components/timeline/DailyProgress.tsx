@@ -18,7 +18,7 @@ export const DailyProgress = ({
   const percentage = totalDoses > 0 ? Math.round((completedDoses / totalDoses) * 100) : 0;
 
   return (
-    <Card className="overflow-hidden border-2">
+    <Card className="overflow-hidden border-2 bg-gradient-warm-cream backdrop-blur-sm">
       <div className="p-6">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">

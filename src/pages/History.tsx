@@ -75,7 +75,7 @@ export default function History() {
 
         {/* Stats Cards */}
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <Card>
+          <Card className="bg-gradient-warm-cream">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Adherence Rate</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -86,7 +86,7 @@ export default function History() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-warm-cream">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
               <Award className="h-4 w-4 text-muted-foreground" />
@@ -97,7 +97,7 @@ export default function History() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-warm-cream">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Doses Taken</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
@@ -111,7 +111,7 @@ export default function History() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Calendar */}
-          <Card>
+          <Card className="bg-gradient-latte">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
@@ -150,7 +150,7 @@ export default function History() {
           </Card>
 
           {/* Selected Date Details */}
-          <Card>
+          <Card className="bg-gradient-warm-cream">
             <CardHeader>
               <CardTitle>
                 {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Select a date'}
