@@ -113,4 +113,72 @@ All colors MUST be HSL.
       transform: translateX(100%);
     }
   }
+
+  @keyframes card-exit {
+    0% {
+      transform: scale(1) rotate(0deg) translateX(0);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(0.95) rotate(-5deg) translateX(50%);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(0.8) rotate(-10deg) translateX(120%);
+      opacity: 0;
+    }
+  }
+
+  @keyframes card-entrance {
+    0% {
+      transform: translateX(100%) scale(0.9);
+      opacity: 0;
+    }
+    70% {
+      transform: translateX(-5%) scale(1.02);
+    }
+    100% {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes confetti-burst {
+    0% {
+      transform: scale(0) translateY(0);
+      opacity: 1;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) translateY(-100px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes checkmark-draw {
+    0% {
+      stroke-dashoffset: 100;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .animate-card-exit {
+    animation: card-exit 0.6s ease-out forwards;
+  }
+
+  .animate-card-entrance {
+    animation: card-entrance 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .animate-confetti-burst {
+    animation: confetti-burst 1s ease-out forwards;
+  }
+
+  .animate-checkmark-draw {
+    animation: checkmark-draw 0.5s ease-out forwards;
+  }
 }

@@ -1,32 +1,44 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Check, Pill } from 'lucide-react';
 import { DoseGroup, formatTimeDisplay } from '@/lib/medicationHelpers';
 import { useMedications } from '@/hooks/useMedications';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { PillSwipeCard } from '@/components/marking/PillSwipeCard';
+import { CompletionCelebration } from '@/components/marking/CompletionCelebration';
+import { QuickMarkList } from '@/components/marking/QuickMarkList';
+import { MarkingModeToggle } from '@/components/marking/MarkingModeToggle';
 
 interface NextDoseCardProps {
   nextDose: DoseGroup | null;
   onDoseComplete?: () => void;
 }
 
+type MarkingMode = 'card' | 'list';
+
 export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) => {
   const { logMedication } = useMedications();
   const { toast } = useToast();
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-  const [isMarking, setIsMarking] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
+  const [mode, setMode] = useState<MarkingMode>(() => {
+    const saved = localStorage.getItem('marking-mode');
+    return (saved as MarkingMode) || 'card';
+  });
+  const [currentPillIndex, setCurrentPillIndex] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isMarking, setIsMarking] = useState(false);
+  const [markedSchedules, setMarkedSchedules] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Reset state when dose changes
-    setCheckedItems(new Set());
-    setIsCompleting(false);
+    setCurrentPillIndex(0);
     setShowCelebration(false);
+    setMarkedSchedules(new Set());
   }, [nextDose?.time]);
+
+  useEffect(() => {
+    localStorage.setItem('marking-mode', mode);
+  }, [mode]);
 
   if (!nextDose) {
     return (
@@ -46,62 +58,78 @@ export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) =>
     );
   }
 
-  const allChecked = nextDose.schedules.every(item => 
-    checkedItems.has(item.schedule.id)
-  );
+  const handlePillTaken = async () => {
+    const currentItem = nextDose.schedules[currentPillIndex];
+    
+    try {
+      await logMedication.mutateAsync({
+        schedule_id: currentItem.schedule.id,
+        status: 'taken',
+      });
 
-  const handleCheckItem = (scheduleId: string) => {
-    setCheckedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(scheduleId)) {
-        newSet.delete(scheduleId);
+      setMarkedSchedules(prev => new Set(prev).add(currentItem.schedule.id));
+
+      // Move to next pill or show celebration
+      if (currentPillIndex < nextDose.schedules.length - 1) {
+        setTimeout(() => {
+          setCurrentPillIndex(prev => prev + 1);
+        }, 300);
       } else {
-        newSet.add(scheduleId);
+        // All pills taken
+        setTimeout(() => {
+          setShowCelebration(true);
+        }, 600);
+
+        toast({
+          title: 'Dose Complete! 🎉',
+          description: 'Great job staying on track!',
+        });
       }
-      return newSet;
-    });
+    } catch (error) {
+      console.error('Error logging medication:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to log medication. Please try again.',
+      });
+    }
   };
 
-  const handleMarkAllTaken = async () => {
+  const handleMarkSingle = async (scheduleId: string) => {
+    try {
+      await logMedication.mutateAsync({
+        schedule_id: scheduleId,
+        status: 'taken',
+      });
+    } catch (error) {
+      console.error('Error logging medication:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to log medication. Please try again.',
+      });
+    }
+  };
+
+  const handleMarkAll = async () => {
     setIsMarking(true);
 
     try {
-      // Mark all medications as taken
       await Promise.all(
-        nextDose.schedules.map(item => 
-          logMedication.mutateAsync({ 
-            schedule_id: item.schedule.id, 
-            status: 'taken' 
+        nextDose.schedules.map(item =>
+          logMedication.mutateAsync({
+            schedule_id: item.schedule.id,
+            status: 'taken',
           })
         )
       );
 
-      // Trigger celebration sequence
       setShowCelebration(true);
 
-      // Stagger checkmark animations
-      nextDose.schedules.forEach((item, index) => {
-        setTimeout(() => {
-          setCheckedItems(prev => new Set(prev).add(item.schedule.id));
-        }, index * 150);
-      });
-
-      // After all checkmarks appear
-      setTimeout(() => {
-        setIsCompleting(true);
-      }, nextDose.schedules.length * 150 + 300);
-
-      // Show toast
       toast({
         title: 'Dose Complete! 🎉',
         description: 'Great job staying on track!',
       });
-
-      // Call onComplete callback
-      setTimeout(() => {
-        onDoseComplete?.();
-      }, 2000);
-
     } catch (error) {
       console.error('Error logging medications:', error);
       toast({
@@ -109,120 +137,56 @@ export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) =>
         title: 'Error',
         description: 'Failed to log medications. Please try again.',
       });
-      setCheckedItems(new Set());
     } finally {
       setIsMarking(false);
     }
   };
 
-  const pillColors = [
-    'bg-blue-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-orange-500',
-    'bg-teal-500',
-  ];
+  const handleCelebrationContinue = () => {
+    setShowCelebration(false);
+    onDoseComplete?.();
+  };
+
+  if (showCelebration) {
+    return (
+      <CompletionCelebration
+        time={nextDose.time}
+        pillCount={nextDose.schedules.length}
+        onContinue={handleCelebrationContinue}
+      />
+    );
+  }
 
   return (
-    <Card className={cn(
-      'border-2 transition-all duration-500',
-      isCompleting && 'border-green-500 bg-green-50 dark:bg-green-950/20',
-      !isCompleting && 'border-primary/20 hover:border-primary/40'
-    )}>
+    <Card className="border-2 border-primary/20 hover:border-primary/40 transition-all">
       <CardHeader>
-        <CardTitle className={cn(
-          'flex items-center gap-2 text-xl transition-colors',
-          isCompleting && 'text-green-700 dark:text-green-300'
-        )}>
-          {isCompleting ? (
-            <>
-              <Check className="h-6 w-6 animate-scale-in" />
-              {formatTimeDisplay(nextDose.time)} Dose Complete! 🎉
-            </>
-          ) : (
-            <>
-              <Pill className="h-6 w-6" />
-              {formatTimeDisplay(nextDose.time)} {nextDose.timeOfDay} Dose
-            </>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Pill List */}
-        <div className="space-y-3">
-          {nextDose.schedules.map((item, index) => {
-            const isChecked = checkedItems.has(item.schedule.id);
-            const colorClass = pillColors[index % pillColors.length];
+        <div className="space-y-4">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Pill className="h-6 w-6" />
+            {formatTimeDisplay(nextDose.time)} {nextDose.timeOfDay} Dose
+          </CardTitle>
 
-            return (
-              <div
-                key={item.schedule.id}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg border p-3 transition-all',
-                  isChecked && 'border-green-500 bg-green-50 dark:bg-green-950/20'
-                )}
-              >
-                <Checkbox
-                  id={item.schedule.id}
-                  checked={isChecked}
-                  onCheckedChange={() => handleCheckItem(item.schedule.id)}
-                  disabled={isMarking || isCompleting}
-                  className={cn(isChecked && 'animate-scale-in')}
-                />
-                
-                {/* Pill Icon */}
-                <div className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full',
-                  colorClass,
-                  'text-white'
-                )}>
-                  <Pill className="h-5 w-5" />
-                </div>
-
-                {/* Medication Info */}
-                <div className="flex-1">
-                  <h4 className="font-semibold">{item.medication.name}</h4>
-                  <p className="text-sm text-muted-foreground">{item.medication.dosage}</p>
-                  {item.medication.instructions && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {item.medication.instructions}
-                    </p>
-                  )}
-                </div>
-
-                {isChecked && (
-                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 animate-scale-in" />
-                )}
-              </div>
-            );
-          })}
+          {/* Mode toggle */}
+          <MarkingModeToggle mode={mode} onModeChange={setMode} />
         </div>
+      </CardHeader>
 
-        {/* Mark All Button */}
-        {!isCompleting && (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={handleMarkAllTaken}
-            disabled={isMarking}
-          >
-            {isMarking ? (
-              'Logging...'
-            ) : (
-              <>
-                <Check className="mr-2 h-5 w-5" />
-                Mark All as Taken
-              </>
-            )}
-          </Button>
-        )}
-
-        {showCelebration && isCompleting && (
-          <div className="text-center animate-fade-in">
-            <p className="text-sm font-medium text-green-700 dark:text-green-300">
-              Keep up the great work! 💪
-            </p>
-          </div>
+      <CardContent>
+        {mode === 'card' ? (
+          <PillSwipeCard
+            medication={nextDose.schedules[currentPillIndex].medication}
+            schedule={nextDose.schedules[currentPillIndex].schedule}
+            pillIndex={currentPillIndex}
+            totalPills={nextDose.schedules.length}
+            onTaken={handlePillTaken}
+          />
+        ) : (
+          <QuickMarkList
+            items={nextDose.schedules}
+            onMarkAll={handleMarkAll}
+            onMarkSingle={handleMarkSingle}
+            isMarking={isMarking}
+          />
         )}
       </CardContent>
     </Card>
