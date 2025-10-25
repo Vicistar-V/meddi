@@ -9,7 +9,7 @@ import { Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMedications } from '@/hooks/useMedications';
 import { useAuth } from '@/context/AuthProvider';
-import { getNextDose, getDosesByTimeOfDay, getGreeting } from '@/lib/medicationHelpers';
+import { getNextDose, getDosesByTimeOfDay, getGreeting, getDoseStatus } from '@/lib/medicationHelpers';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -31,6 +31,16 @@ export default function Dashboard() {
   const dosesTimeline = getDosesByTimeOfDay(medications, schedules, todayLogs, currentTime);
   const greeting = getGreeting(user?.email?.split('@')[0] || null, currentTime);
 
+  // Calculate status for next dose
+  const nextDoseStatus = nextDose 
+    ? getDoseStatus(
+        nextDose.time, 
+        nextDose.schedules.map(s => s.schedule.id),
+        todayLogs,
+        currentTime
+      )
+    : null;
+
   const hasMedications = medications.length > 0;
 
   return (
@@ -47,6 +57,7 @@ export default function Dashboard() {
         {hasMedications ? (
           <NextDoseCard 
             nextDose={nextDose}
+            status={nextDoseStatus}
             onDoseComplete={() => {
               // Refresh will happen automatically via query invalidation
             }}

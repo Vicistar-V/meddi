@@ -159,6 +159,13 @@ export const DoseCard = ({
               ))}
             </div>
 
+            {/* Reassuring message for overdue doses */}
+            {status === 'missed' && (
+              <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground italic">
+                💡 Don't worry - we'll log this at the time you actually took it
+              </div>
+            )}
+
             {/* Action Buttons */}
             {(status === 'current' || status === 'missed') && onMarkTaken && (
               <Button 

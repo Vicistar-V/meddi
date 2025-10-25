@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Sparkles, CheckCircle2, Calendar } from 'lucide-react';
+import { Clock, Sparkles, CheckCircle2, Calendar, AlertCircle } from 'lucide-react';
 import { DoseGroup, getDoseStatus } from '@/lib/medicationHelpers';
 import { MedicationLog } from '@/hooks/useMedications';
 import { groupDosesByProximity } from '@/lib/timeHelpers';
@@ -72,7 +72,7 @@ export const DayTimeline = ({
 
   // Group active doses by proximity
   const activeDoses = activeDosesList.map(item => item.dose);
-  const { now, next, later } = groupDosesByProximity(activeDoses, currentTime);
+  const { now, next, later, overdue } = groupDosesByProximity(activeDoses, currentTime);
 
   // Helper to find status for a dose
   const getStatusForDose = (dose: DoseGroup) => {
@@ -162,6 +162,32 @@ export const DayTimeline = ({
         missedDoses={missedDoses}
         upcomingDoses={upcomingDoses}
       />
+
+      {/* OVERDUE Section - Highest priority */}
+      {overdue.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+          <TimelineSection 
+            title="Overdue" 
+            subtitle="Please take these as soon as possible"
+            icon={<AlertCircle className="h-4 w-4 text-red-600" />}
+          >
+            {overdue.map((dose, index) => (
+              <div 
+                key={`${dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-left-4 border-l-4 border-red-500 pl-2"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <DoseCard
+                  dose={dose}
+                  status="missed"
+                  currentTime={currentTime}
+                  onMarkTaken={handleMarkTaken}
+                />
+              </div>
+            ))}
+          </TimelineSection>
+        </div>
+      )}
 
       {/* NOW Section - Current doses */}
       {now.length > 0 && (

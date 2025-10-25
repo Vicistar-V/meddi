@@ -52,7 +52,7 @@ export function getNextDose(
     });
   });
 
-  // Sort by time and find next dose
+  // Sort by time
   const sortedDoses = Array.from(doseGroups.values()).sort((a, b) => 
     a.time.localeCompare(b.time)
   );
@@ -61,10 +61,22 @@ export function getNextDose(
   const currentMinute = currentTime.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
 
-  // Find first dose that hasn't passed yet or is current
-  const nextDose = sortedDoses.find(dose => dose.time >= currentTimeStr);
+  // Separate into overdue and upcoming doses
+  const overdueDoses = sortedDoses.filter(dose => {
+    const scheduleIds = dose.schedules.map(s => s.schedule.id);
+    const doseStatus = getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
+    return doseStatus === 'missed';
+  });
   
-  return nextDose || null;
+  const upcomingDoses = sortedDoses.filter(dose => dose.time >= currentTimeStr);
+  
+  // PRIORITY: Show overdue first (most recent overdue)
+  if (overdueDoses.length > 0) {
+    return overdueDoses[overdueDoses.length - 1]; // Most recent overdue
+  }
+  
+  // Otherwise show next upcoming
+  return upcomingDoses[0] || null;
 }
 
 /**

@@ -82,16 +82,32 @@ export function groupDosesByProximity(
   now: DoseGroup[];
   next: DoseGroup[];
   later: DoseGroup[];
+  overdue: DoseGroup[];
 } {
   const groups = {
     now: [] as DoseGroup[],
     next: [] as DoseGroup[],
     later: [] as DoseGroup[],
+    overdue: [] as DoseGroup[],
   };
 
   doses.forEach(dose => {
     const context = getTimeContext(dose.time, currentTime);
-    groups[context].push(dose);
+    
+    // Check if dose is overdue (past scheduled time + grace period)
+    const [hours, minutes] = dose.time.split(':').map(Number);
+    const scheduleDate = new Date(currentTime);
+    scheduleDate.setHours(hours, minutes, 0, 0);
+    
+    const diffMs = currentTime.getTime() - scheduleDate.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    
+    // If more than 30 minutes past scheduled time, it's overdue
+    if (diffMinutes > 30) {
+      groups.overdue.push(dose);
+    } else {
+      groups[context].push(dose);
+    }
   });
 
   return groups;
@@ -106,4 +122,25 @@ export function hasTimePassed(scheduleTime: string, currentTime: Date = new Date
   scheduleDate.setHours(hours, minutes, 0, 0);
 
   return scheduleDate.getTime() < currentTime.getTime();
+}
+
+/**
+ * Calculate time elapsed since a scheduled time (for overdue doses)
+ */
+export function calculateTimeAgo(scheduleTime: string, currentTime: Date = new Date()): string {
+  const [schedHour, schedMin] = scheduleTime.split(':').map(Number);
+  const schedDate = new Date(currentTime);
+  schedDate.setHours(schedHour, schedMin, 0, 0);
+  
+  const diffMs = currentTime.getTime() - schedDate.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  
+  if (diffMinutes < 0) return 'not yet'; // Future dose
+  if (diffMinutes < 60) return `${diffMinutes} min`;
+  
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+  
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }

@@ -2,18 +2,20 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, Pill } from 'lucide-react';
-import { DoseGroup, formatTimeDisplay } from '@/lib/medicationHelpers';
+import { Check, Pill, AlertCircle } from 'lucide-react';
+import { DoseGroup, formatTimeDisplay, DoseStatus } from '@/lib/medicationHelpers';
+import { calculateTimeAgo } from '@/lib/timeHelpers';
 import { useMedications } from '@/hooks/useMedications';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface NextDoseCardProps {
   nextDose: DoseGroup | null;
+  status?: DoseStatus | null;
   onDoseComplete?: () => void;
 }
 
-export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) => {
+export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardProps) => {
   const { logMedication } = useMedications();
   const { toast } = useToast();
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
@@ -91,10 +93,12 @@ export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) =>
         setIsCompleting(true);
       }, nextDose.schedules.length * 150 + 300);
 
-      // Show toast
+      // Show toast with different message for overdue doses
       toast({
-        title: 'Dose Complete! 🎉',
-        description: 'Great job staying on track!',
+        title: status === 'missed' ? 'Dose Logged! 🎯' : 'Dose Complete! 🎉',
+        description: status === 'missed'
+          ? 'Better late than never! Logged at actual time.'
+          : 'Great job staying on track!',
       });
 
       // Call onComplete callback
@@ -126,18 +130,25 @@ export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) =>
   return (
     <Card className={cn(
       'border-2 transition-all duration-500',
+      status === 'missed' && !isCompleting && 'border-red-500 bg-red-50 dark:bg-red-950/20 ring-2 ring-red-500/20',
       isCompleting && 'border-green-500 bg-green-50 dark:bg-green-950/20',
-      !isCompleting && 'border-primary/20 hover:border-primary/40'
+      !isCompleting && status !== 'missed' && 'border-primary/20 hover:border-primary/40'
     )}>
       <CardHeader>
         <CardTitle className={cn(
           'flex items-center gap-2 text-xl transition-colors',
-          isCompleting && 'text-green-700 dark:text-green-300'
+          isCompleting && 'text-green-700 dark:text-green-300',
+          status === 'missed' && !isCompleting && 'text-red-700 dark:text-red-300'
         )}>
           {isCompleting ? (
             <>
               <Check className="h-6 w-6 animate-scale-in" />
               {formatTimeDisplay(nextDose.time)} Dose Complete! 🎉
+            </>
+          ) : status === 'missed' ? (
+            <>
+              <AlertCircle className="h-6 w-6 text-red-600" />
+              {formatTimeDisplay(nextDose.time)} Dose - Overdue
             </>
           ) : (
             <>
@@ -148,6 +159,15 @@ export const NextDoseCard = ({ nextDose, onDoseComplete }: NextDoseCardProps) =>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Overdue Badge */}
+        {status === 'missed' && !isCompleting && (
+          <div className="flex items-center gap-2 rounded-lg bg-red-100 dark:bg-red-900/30 px-4 py-2 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <span className="font-semibold text-red-700 dark:text-red-400">
+              OVERDUE - {calculateTimeAgo(nextDose.time)} late
+            </span>
+          </div>
+        )}
         {/* Pill List */}
         <div className="space-y-3">
           {nextDose.schedules.map((item, index) => {
