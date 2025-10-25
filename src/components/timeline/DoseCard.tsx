@@ -135,31 +135,6 @@ export const DoseCard = ({
           </div>
         </div>
 
-        {/* Direct Action Button (Collapsed, for current/missed only) */}
-        {!isExpanded && (status === 'current' || status === 'missed') && onMarkTaken && (
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMarkTaken();
-            }}
-            disabled={isMarking}
-            className="w-full mt-4"
-            size="lg"
-          >
-            {isMarking ? (
-              <>
-                <Clock className="mr-2 h-4 w-4 animate-spin" />
-                Logging...
-              </>
-            ) : (
-              <>
-                <Check className="mr-2 h-5 w-5" />
-                Tap to Mark Taken
-              </>
-            )}
-          </Button>
-        )}
-
         {/* Expanded Content */}
         {isExpanded && (
           <div 
@@ -184,28 +159,26 @@ export const DoseCard = ({
               ))}
             </div>
 
-            {/* Quick Action Bar */}
+            {/* Action Buttons */}
             {(status === 'current' || status === 'missed') && onMarkTaken && (
-              <div className="flex gap-2 p-2 bg-secondary/50 rounded-lg">
-                <Button 
-                  onClick={handleMarkTaken}
-                  disabled={isMarking}
-                  className="flex-1"
-                  size="sm"
-                >
-                  {isMarking ? (
-                    <>
-                      <Clock className="mr-2 h-4 w-4 animate-spin" />
-                      Logging...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Mark All
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button 
+                onClick={handleMarkTaken}
+                disabled={isMarking}
+                className="w-full"
+                size="sm"
+              >
+                {isMarking ? (
+                  <>
+                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    Logging...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Mark All as Taken
+                  </>
+                )}
+              </Button>
             )}
           </div>
         )}
