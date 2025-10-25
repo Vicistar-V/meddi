@@ -68,9 +68,9 @@ serve(async (req) => {
       );
     }
 
-    // Convert image to base64
+    // Convert image to base64 using chunked approach to avoid stack overflow
     const arrayBuffer = await imageData.arrayBuffer();
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const base64Image = arrayBufferToBase64(arrayBuffer);
 
     // Call Google Cloud Vision API
     const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY');
@@ -137,6 +137,19 @@ serve(async (req) => {
     );
   }
 });
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000; // Process 32KB at a time to avoid stack overflow
+  let binary = '';
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  
+  return btoa(binary);
+}
 
 function parseMedicationInfo(text: string): {
   name: string;
