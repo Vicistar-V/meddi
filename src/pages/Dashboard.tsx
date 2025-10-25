@@ -1,91 +1,102 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TodaySchedule } from '@/components/TodaySchedule';
 import { AddMedicationFlow } from '@/components/AddMedicationFlow';
-import { MedicationsList } from '@/components/MedicationsList';
-import { Plus, Camera } from 'lucide-react';
+import { NextDoseCard } from '@/components/NextDoseCard';
+import { DayTimeline } from '@/components/DayTimeline';
+import { BottomNav } from '@/components/BottomNav';
+import { Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useMedications } from '@/hooks/useMedications';
+import { useAuth } from '@/context/AuthProvider';
+import { getNextDose, getDosesByTimeOfDay, getGreeting } from '@/lib/medicationHelpers';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { medications, schedules, todayLogs } = useMedications();
   const [showAddMedication, setShowAddMedication] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every minute for real-time missed status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const nextDose = getNextDose(medications, schedules, todayLogs, currentTime);
+  const dosesTimeline = getDosesByTimeOfDay(medications, schedules, todayLogs, currentTime);
+  const greeting = getGreeting(user?.email?.split('@')[0] || null, currentTime);
+
+  const hasMedications = medications.length > 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold">Welcome back!</h1>
-          <p className="text-muted-foreground">
-            Manage your medications and stay on track with your health
-          </p>
-        </div>
-
-        <div className="mb-8 grid gap-4 md:grid-cols-2">
-          <Card className="cursor-pointer transition-shadow hover:shadow-lg">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" />
-                <CardTitle>Add Medication</CardTitle>
-              </div>
-              <CardDescription>
-                Scan a prescription or add medication manually
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" onClick={() => setShowAddMedication(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Medication
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer transition-shadow hover:shadow-lg" onClick={() => navigate('/verify')}>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Camera className="h-5 w-5 text-primary" />
-                <CardTitle>Verify Pill</CardTitle>
-              </div>
-              <CardDescription>
-                Use your camera to identify a pill
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="secondary">
-                <Camera className="mr-2 h-4 w-4" />
-                Open Camera
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Today's Schedule</CardTitle>
-            <CardDescription>Your medication schedule for today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TodaySchedule />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>My Medications</CardTitle>
-            <CardDescription>Manage all your medications</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MedicationsList />
-          </CardContent>
-        </Card>
-
-        <AddMedicationFlow 
-          open={showAddMedication} 
-          onOpenChange={setShowAddMedication} 
-        />
+    <div className="min-h-screen bg-background pb-20">
+      <Navbar onAddClick={() => setShowAddMedication(true)} />
+      
+      {/* Zone 1: The Action Center (Hero Section) */}
+      <div className="container mx-auto px-4 pt-8 pb-6">
+        {/* Personalized Greeting */}
+        <h1 className="mb-6 text-2xl font-bold animate-fade-in">
+          {greeting}
+        </h1>
+        
+        {hasMedications ? (
+          <NextDoseCard 
+            nextDose={nextDose}
+            onDoseComplete={() => {
+              // Refresh will happen automatically via query invalidation
+            }}
+          />
+        ) : (
+          <div className="rounded-lg border border-dashed p-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <Camera className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="mb-2 text-xl font-semibold">Welcome to Pill-Pal AI!</h3>
+            <p className="mb-6 text-muted-foreground">
+              Get started by adding your first medication
+            </p>
+            <Button size="lg" onClick={() => setShowAddMedication(true)}>
+              Add Your First Medication
+            </Button>
+          </div>
+        )}
       </div>
+      
+      {/* Zone 2: The Day's Plan (Timeline) */}
+      {hasMedications && (
+        <div className="container mx-auto px-4 pb-8">
+          <h2 className="mb-4 text-lg font-semibold">Today's Plan</h2>
+          <DayTimeline 
+            dosesTimeline={dosesTimeline}
+            todayLogs={todayLogs}
+            currentTime={currentTime}
+          />
+        </div>
+      )}
+      
+      {/* Zone 3: Floating Action Button */}
+      <Button 
+        className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
+        size="icon"
+        onClick={() => navigate('/verify')}
+        aria-label="Identify Pill"
+      >
+        <Camera className="h-6 w-6" />
+      </Button>
+      
+      {/* Bottom Navigation */}
+      <BottomNav />
+      
+      {/* Modals */}
+      <AddMedicationFlow 
+        open={showAddMedication} 
+        onOpenChange={setShowAddMedication} 
+      />
     </div>
   );
 }
