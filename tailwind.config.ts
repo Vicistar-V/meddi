@@ -58,12 +58,6 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
-      backgroundImage: {
-        "gradient-coffee": "linear-gradient(135deg, hsl(25, 45%, 35%) 0%, hsl(18, 60%, 50%) 50%, hsl(28, 20%, 92%) 100%)",
-        "gradient-mocha": "linear-gradient(135deg, hsl(20, 40%, 30%) 0%, hsl(25, 50%, 45%) 100%)",
-        "gradient-chocolate": "linear-gradient(135deg, hsl(15, 50%, 25%) 0%, hsl(25, 45%, 35%) 50%, hsl(20, 50%, 55%) 100%)",
-        "gradient-latte": "linear-gradient(180deg, hsl(30, 25%, 96%) 0%, hsl(28, 20%, 92%) 100%)",
-      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
