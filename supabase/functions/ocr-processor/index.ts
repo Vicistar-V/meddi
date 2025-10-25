@@ -68,57 +68,79 @@ serve(async (req) => {
       );
     }
 
-    // Convert image to base64 using chunked approach to avoid stack overflow
+    // Convert image to base64 data URL
     const arrayBuffer = await imageData.arrayBuffer();
     const base64Image = arrayBufferToBase64(arrayBuffer);
+    const mimeType = image_path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-    // Call Google Cloud Vision API
-    const visionApiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY');
-    if (!visionApiKey) {
-      console.error('Google Cloud Vision API key not configured');
+    // Call Lovable AI with vision capabilities
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('Lovable API key not configured');
       return new Response(
         JSON.stringify({ error: 'OCR service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const visionResponse = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requests: [
-            {
-              image: {
-                content: base64Image,
+    console.log('Calling Lovable AI for OCR...');
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Extract all text from this prescription image. Return only the raw text you see, preserving line breaks and formatting.'
               },
-              features: [
-                {
-                  type: 'TEXT_DETECTION',
-                  maxResults: 1,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
+              {
+                type: 'image_url',
+                image_url: {
+                  url: dataUrl
+                }
+              }
+            ]
+          }
+        ],
+      }),
+    });
 
-    if (!visionResponse.ok) {
-      const errorText = await visionResponse.text();
-      console.error('Vision API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: 'OCR processing failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const visionData = await visionResponse.json();
-    const detectedText = visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
+    const aiData = await aiResponse.json();
+    console.log('Lovable AI response received');
 
+    const detectedText = aiData.choices?.[0]?.message?.content || '';
     console.log('Detected text length:', detectedText.length);
 
     // Parse the text to extract medication information
