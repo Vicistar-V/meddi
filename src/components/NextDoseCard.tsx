@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Check, Pill, AlertCircle } from 'lucide-react';
+import { Check, Pill, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { DoseGroup, formatTimeDisplay, DoseStatus } from '@/lib/medicationHelpers';
 import { calculateTimeAgo } from '@/lib/timeHelpers';
 import { useMedications } from '@/hooks/useMedications';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface NextDoseCardProps {
   nextDose: DoseGroup | null;
@@ -18,14 +28,13 @@ interface NextDoseCardProps {
 export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardProps) => {
   const { logMedication } = useMedications();
   const { toast } = useToast();
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-  const [isMarking, setIsMarking] = useState(false);
+  const [markingScheduleId, setMarkingScheduleId] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     // Reset state when dose changes
-    setCheckedItems(new Set());
+    setMarkingScheduleId(null);
     setIsCompleting(false);
     setShowCelebration(false);
   }, [nextDose?.time]);
@@ -48,24 +57,41 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
     );
   }
 
-  const allChecked = nextDose.schedules.every(item => 
-    checkedItems.has(item.schedule.id)
-  );
+  const handleMarkSingleTaken = async (scheduleId: string, medicationName: string) => {
+    setMarkingScheduleId(scheduleId);
+    
+    try {
+      await logMedication.mutateAsync({
+        schedule_id: scheduleId,
+        status: 'taken',
+      });
 
-  const handleCheckItem = (scheduleId: string) => {
-    setCheckedItems(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(scheduleId)) {
-        newSet.delete(scheduleId);
-      } else {
-        newSet.add(scheduleId);
+      toast({
+        title: 'Medication Logged! ✓',
+        description: `${medicationName} marked as taken`,
+      });
+
+      // Check if this was the last medication in the dose
+      if (nextDose && nextDose.schedules.length === 1) {
+        setIsCompleting(true);
+        setShowCelebration(true);
+        setTimeout(() => {
+          onDoseComplete?.();
+        }, 1500);
       }
-      return newSet;
-    });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to log medication',
+      });
+    } finally {
+      setMarkingScheduleId(null);
+    }
   };
 
   const handleMarkAllTaken = async () => {
-    setIsMarking(true);
+    if (!nextDose) return;
 
     try {
       // Mark all medications as taken
@@ -78,20 +104,9 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
         )
       );
 
-      // Trigger celebration sequence
+      // Trigger celebration
+      setIsCompleting(true);
       setShowCelebration(true);
-
-      // Stagger checkmark animations
-      nextDose.schedules.forEach((item, index) => {
-        setTimeout(() => {
-          setCheckedItems(prev => new Set(prev).add(item.schedule.id));
-        }, index * 150);
-      });
-
-      // After all checkmarks appear
-      setTimeout(() => {
-        setIsCompleting(true);
-      }, nextDose.schedules.length * 150 + 300);
 
       // Show toast with different message for overdue doses
       toast({
@@ -104,7 +119,7 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
       // Call onComplete callback
       setTimeout(() => {
         onDoseComplete?.();
-      }, 2000);
+      }, 1500);
 
     } catch (error) {
       console.error('Error logging medications:', error);
@@ -113,19 +128,9 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
         title: 'Error',
         description: 'Failed to log medications. Please try again.',
       });
-      setCheckedItems(new Set());
-    } finally {
-      setIsMarking(false);
     }
   };
 
-  const pillColors = [
-    'bg-blue-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-orange-500',
-    'bg-teal-500',
-  ];
 
   return (
     <Card className={cn(
@@ -168,73 +173,86 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
             </span>
           </div>
         )}
-        {/* Pill List */}
-        <div className="space-y-3">
-          {nextDose.schedules.map((item, index) => {
-            const isChecked = checkedItems.has(item.schedule.id);
-            const colorClass = pillColors[index % pillColors.length];
-
+        {/* Medications List */}
+        <div className="space-y-2">
+          {nextDose.schedules.map((item) => {
+            const isMarking = markingScheduleId === item.schedule.id;
+            
             return (
               <div
                 key={item.schedule.id}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg border p-3 transition-all',
-                  isChecked && 'border-green-500 bg-green-50 dark:bg-green-950/20'
+                  "group relative overflow-hidden rounded-lg border bg-card transition-all duration-200",
+                  "hover:shadow-md hover:border-primary/30"
                 )}
               >
-                <Checkbox
-                  id={item.schedule.id}
-                  checked={isChecked}
-                  onCheckedChange={() => handleCheckItem(item.schedule.id)}
-                  disabled={isMarking || isCompleting}
-                  className={cn(isChecked && 'animate-scale-in')}
-                />
-                
-                {/* Pill Icon */}
-                <div className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full',
-                  colorClass,
-                  'text-white'
-                )}>
-                  <Pill className="h-5 w-5" />
-                </div>
-
-                {/* Medication Info */}
-                <div className="flex-1">
-                  <h4 className="font-semibold">{item.medication.name}</h4>
-                  <p className="text-sm text-muted-foreground">{item.medication.dosage}</p>
-                  {item.medication.instructions && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {item.medication.instructions}
+                <div className="flex items-center gap-3 p-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <Pill className="h-5 w-5 text-primary" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm leading-tight">
+                      {item.medication.name}
                     </p>
-                  )}
-                </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {item.medication.dosage}
+                    </p>
+                    {item.medication.instructions && (
+                      <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1 italic">
+                        {item.medication.instructions}
+                      </p>
+                    )}
+                  </div>
 
-                {isChecked && (
-                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 animate-scale-in" />
-                )}
+                  <Button
+                    size="sm"
+                    onClick={() => handleMarkSingleTaken(item.schedule.id, item.medication.name)}
+                    disabled={isMarking || isCompleting}
+                    className="shrink-0"
+                  >
+                    {isMarking ? (
+                      'Logging...'
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        Take
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Mark All Button */}
+        {/* Mark All Button with Confirmation */}
         {!isCompleting && (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={handleMarkAllTaken}
-            disabled={isMarking}
-          >
-            {isMarking ? (
-              'Logging...'
-            ) : (
-              <>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                className="w-full mt-2"
+                size="lg"
+              >
                 <Check className="mr-2 h-5 w-5" />
                 Mark All as Taken
-              </>
-            )}
-          </Button>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Mark All Medications as Taken?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will log all {nextDose.schedules.length} medication{nextDose.schedules.length > 1 ? 's' : ''} from this dose as taken at the current time.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleMarkAllTaken}>
+                  Confirm
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
 
         {showCelebration && isCompleting && (
