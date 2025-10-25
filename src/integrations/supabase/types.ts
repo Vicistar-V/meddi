@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      medication_logs: {
+        Row: {
+          id: string
+          schedule_id: string
+          status: Database["public"]["Enums"]["medication_log_status"]
+          taken_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          schedule_id: string
+          status: Database["public"]["Enums"]["medication_log_status"]
+          taken_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          schedule_id?: string
+          status?: Database["public"]["Enums"]["medication_log_status"]
+          taken_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_logs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medications: {
+        Row: {
+          created_at: string | null
+          dosage: string
+          id: string
+          instructions: string | null
+          name: string
+          pill_image_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dosage: string
+          id?: string
+          instructions?: string | null
+          name: string
+          pill_image_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dosage?: string
+          id?: string
+          instructions?: string | null
+          name?: string
+          pill_image_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          caregiver_id: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          patient_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          caregiver_id?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          patient_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          caregiver_id?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          patient_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_caregiver_id_fkey"
+            columns: ["caregiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedules: {
+        Row: {
+          days_of_week: Json
+          id: string
+          medication_id: string
+          time_to_take: string
+          user_id: string
+        }
+        Insert: {
+          days_of_week?: Json
+          id?: string
+          medication_id: string
+          time_to_take: string
+          user_id: string
+        }
+        Update: {
+          days_of_week?: Json
+          id?: string
+          medication_id?: string
+          time_to_take?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +180,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      medication_log_status: "taken" | "skipped" | "missed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +307,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      medication_log_status: ["taken", "skipped", "missed"],
+    },
   },
 } as const
