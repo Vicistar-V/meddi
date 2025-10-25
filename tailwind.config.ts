@@ -58,12 +58,6 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
-      backgroundImage: {
-        'gradient-sunset': 'linear-gradient(135deg, hsl(270, 70%, 60%) 0%, hsl(25, 90%, 65%) 50%, hsl(340, 80%, 70%) 100%)',
-        'gradient-morning': 'linear-gradient(135deg, hsl(25, 90%, 65%) 0%, hsl(45, 90%, 60%) 50%, hsl(340, 80%, 70%) 100%)',
-        'gradient-sky': 'linear-gradient(135deg, hsl(200, 70%, 55%) 0%, hsl(180, 65%, 60%) 100%)',
-        'gradient-night': 'linear-gradient(135deg, hsl(230, 60%, 45%) 0%, hsl(270, 70%, 60%) 50%, hsl(220, 70%, 55%) 100%)',
-      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
