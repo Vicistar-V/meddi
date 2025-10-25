@@ -94,21 +94,36 @@ export function groupDosesByProximity(
   };
 
   doses.forEach(dose => {
-    const scheduleIds = dose.schedules.map(s => s.schedule.id);
-    const status = getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
-    
-    // Skip completed doses entirely
-    if (status === 'completed') {
+    // Filter out completed schedules - only show incomplete ones
+    const incompleteSchedules = dose.schedules.filter(item => {
+      const isLogged = todayLogs.some(
+        log => log.schedule_id === item.schedule.id && log.status === 'taken'
+      );
+      return !isLogged;
+    });
+
+    // Skip if all schedules are completed
+    if (incompleteSchedules.length === 0) {
       return;
     }
+
+    // Create a new dose group with only incomplete schedules
+    const filteredDose: DoseGroup = {
+      ...dose,
+      schedules: incompleteSchedules
+    };
+
+    // Get status for the filtered dose
+    const scheduleIds = filteredDose.schedules.map(s => s.schedule.id);
+    const status = getDoseStatus(filteredDose.time, scheduleIds, todayLogs, currentTime);
     
-    const context = getTimeContext(dose.time, currentTime);
+    const context = getTimeContext(filteredDose.time, currentTime);
     
     // Check if dose is overdue based on status
     if (status === 'missed') {
-      groups.overdue.push(dose);
+      groups.overdue.push(filteredDose);
     } else {
-      groups[context].push(dose);
+      groups[context].push(filteredDose);
     }
   });
 
