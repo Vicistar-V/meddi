@@ -38,14 +38,14 @@ export const DoseCard = ({
     completed: "border-green-500/50 bg-green-50/50 dark:bg-green-950/20 hover:border-green-500/70",
     current: "border-primary bg-primary/5 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 ring-2 ring-primary/20",
     upcoming: "border-border bg-card hover:border-primary/30 hover:shadow-md",
-    missed: "border-red-500/50 bg-red-50/50 dark:bg-red-950/20 hover:border-red-500/70"
+    missed: "border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20 hover:border-orange-500/70"
   };
 
   const iconStyles = {
     completed: "bg-green-500 text-white",
     current: "bg-primary text-primary-foreground animate-pulse",
     upcoming: "bg-secondary text-muted-foreground",
-    missed: "bg-red-500 text-white"
+    missed: "bg-orange-500 text-white"
   };
 
   const Icon = {
@@ -85,14 +85,14 @@ export const DoseCard = ({
                   status === 'completed' && "text-green-700 dark:text-green-400",
                   status === 'current' && "text-primary",
                   status === 'upcoming' && "text-foreground",
-                  status === 'missed' && "text-red-700 dark:text-red-400"
+                  status === 'missed' && "text-orange-700 dark:text-orange-400"
                 )}>
                   {formatTimeDisplay(dose.time)}
                 </p>
                 <span className={cn(
                   "text-xs font-medium",
                   status === 'current' && "text-primary",
-                  status === 'missed' && "text-red-600 dark:text-red-400",
+                  status === 'missed' && "text-orange-600 dark:text-orange-400",
                   (status === 'completed' || status === 'upcoming') && "text-muted-foreground"
                 )}>
                   {relativeTime}
@@ -121,7 +121,7 @@ export const DoseCard = ({
               </span>
             )}
             {status === 'missed' && (
-              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+              <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
                 Missed
               </span>
             )}

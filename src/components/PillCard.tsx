@@ -16,7 +16,7 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
     <Card className={cn(
       'transition-all',
       status === 'taken' && 'border-green-500 bg-green-50',
-      status === 'missed' && 'border-red-500 bg-red-50'
+      status === 'missed' && 'border-orange-500 bg-orange-50'
     )}>
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4">
@@ -24,7 +24,7 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
             'flex h-12 w-12 items-center justify-center rounded-full',
             status === 'taken' && 'bg-green-500',
             status === 'upcoming' && 'bg-primary',
-            status === 'missed' && 'bg-red-500'
+            status === 'missed' && 'bg-orange-500'
           )}>
             {status === 'taken' ? (
               <Check className="h-6 w-6 text-white" />
@@ -48,7 +48,7 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
           <div className="text-sm font-medium text-green-600">Completed</div>
         )}
         {status === 'missed' && (
-          <div className="text-sm font-medium text-red-600">Missed</div>
+          <div className="text-sm font-medium text-orange-600">Missed</div>
         )}
       </CardContent>
     </Card>

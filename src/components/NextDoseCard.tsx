@@ -135,7 +135,7 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
   return (
     <Card className={cn(
       'border-2 transition-all duration-500',
-      status === 'missed' && !isCompleting && 'border-red-500 bg-red-50 dark:bg-red-950/20 ring-2 ring-red-500/20',
+      status === 'missed' && !isCompleting && 'border-orange-500 bg-orange-50 dark:bg-orange-950/20 ring-2 ring-orange-500/20',
       isCompleting && 'border-green-500 bg-green-50 dark:bg-green-950/20',
       !isCompleting && status !== 'missed' && 'border-primary/20 hover:border-primary/40'
     )}>
@@ -143,7 +143,7 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
         <CardTitle className={cn(
           'flex items-center gap-2 text-xl transition-colors',
           isCompleting && 'text-green-700 dark:text-green-300',
-          status === 'missed' && !isCompleting && 'text-red-700 dark:text-red-300'
+          status === 'missed' && !isCompleting && 'text-orange-700 dark:text-orange-300'
         )}>
           {isCompleting ? (
             <>
@@ -152,7 +152,7 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
             </>
           ) : status === 'missed' ? (
             <>
-              <AlertCircle className="h-6 w-6 text-red-600" />
+              <AlertCircle className="h-6 w-6 text-orange-600" />
               {formatTimeDisplay(nextDose.time)} Dose - Overdue
             </>
           ) : (
@@ -166,9 +166,9 @@ export const NextDoseCard = ({ nextDose, status, onDoseComplete }: NextDoseCardP
       <CardContent className="space-y-4">
         {/* Overdue Badge */}
         {status === 'missed' && !isCompleting && (
-          <div className="flex items-center gap-2 rounded-lg bg-red-100 dark:bg-red-900/30 px-4 py-2 animate-in fade-in slide-in-from-top-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <span className="font-semibold text-red-700 dark:text-red-400">
+          <div className="flex items-center gap-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 px-4 py-2 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="h-5 w-5 text-orange-600" />
+            <span className="font-semibold text-orange-700 dark:text-orange-400">
               OVERDUE - {calculateTimeAgo(nextDose.time)} late
             </span>
           </div>

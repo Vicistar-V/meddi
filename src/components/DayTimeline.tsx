@@ -169,12 +169,12 @@ export const DayTimeline = ({
           <TimelineSection 
             title="Overdue" 
             subtitle="Please take these as soon as possible"
-            icon={<AlertCircle className="h-4 w-4 text-red-600" />}
+            icon={<AlertCircle className="h-4 w-4 text-orange-600" />}
           >
             {overdue.map((dose, index) => (
               <div 
                 key={`${dose.time}-${index}`}
-                className="animate-in fade-in slide-in-from-left-4 border-l-4 border-red-500 pl-2"
+                className="animate-in fade-in slide-in-from-left-4 border-l-4 border-orange-500 pl-2"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <DoseCard

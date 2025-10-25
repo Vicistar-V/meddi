@@ -46,7 +46,7 @@ export const DailyProgress = ({
           {/* Missed segment */}
           {missedDoses > 0 && (
             <div
-              className="absolute top-0 h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-700 ease-out"
+              className="absolute top-0 h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-700 ease-out"
               style={{ 
                 left: `${(completedDoses / totalDoses) * 100}%`,
                 width: `${(missedDoses / totalDoses) * 100}%` 
@@ -79,7 +79,7 @@ export const DailyProgress = ({
 
           {/* Missed Badge */}
           {missedDoses > 0 && (
-            <div className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400 transition-all animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-400 transition-all animate-in fade-in slide-in-from-bottom-2">
               <AlertCircle className="h-3.5 w-3.5" />
               <span>{missedDoses} Missed</span>
             </div>
