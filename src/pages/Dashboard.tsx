@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TodaySchedule } from '@/components/TodaySchedule';
+import { AddMedicationFlow } from '@/components/AddMedicationFlow';
 import { Plus, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showAddMedication, setShowAddMedication] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,7 +34,7 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => setShowAddMedication(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Medication
               </Button>
@@ -66,6 +69,11 @@ export default function Dashboard() {
             <TodaySchedule />
           </CardContent>
         </Card>
+
+        <AddMedicationFlow 
+          open={showAddMedication} 
+          onOpenChange={setShowAddMedication} 
+        />
       </div>
     </div>
   );

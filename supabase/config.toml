@@ -1,1 +1,4 @@
 project_id = "muwiuiwtyodefmszrjjf"
+
+[functions.drug-interaction-checker]
+verify_jwt = true
