@@ -88,7 +88,9 @@ serve(async (req) => {
 
     const structuredPrompt = `You are an expert at reading pharmacy prescription labels and pill bottle labels.
 
-Analyze the image and extract ALL medications listed. For each medication, extract:
+This is a SINGLE pill bottle label. Extract ONE medication from it.
+
+Extract the following information:
 - medicationName: The drug name (e.g., "Lisinopril", "Betaloc", "Metformin")
 - dosage: The strength with unit (e.g., "100mg", "20 mcg", "500mg")
 - quantityInstruction: How much to take (e.g., "Take one tablet", "2 tabs", "1 capsule")
@@ -102,17 +104,15 @@ Common medical abbreviations to interpret:
 - PRN = as needed
 - PO = by mouth
 
-Return ONLY a valid JSON array with this exact structure (no markdown, no code blocks, no explanations):
-[
-  {
-    "medicationName": "string",
-    "dosage": "string",
-    "quantityInstruction": "string",
-    "frequencyInstruction": "string"
-  }
-]
+Return ONLY a JSON object with this exact structure (no markdown, no code blocks, no explanations):
+{
+  "medicationName": "string",
+  "dosage": "string",
+  "quantityInstruction": "string",
+  "frequencyInstruction": "string"
+}
 
-If no medications are found, return an empty array: []
+If no medication is found or the label is unreadable, return: { "medicationName": null, "dosage": null, "quantityInstruction": null, "frequencyInstruction": null }
 
 Be precise and extract only the information that is clearly visible on the label.`;
 
@@ -144,7 +144,7 @@ Be precise and extract only the information that is clearly visible on the label
       if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ 
-            medications: [],
+            medication: null,
             error: 'Rate limit exceeded. Please try again in a moment.',
             error_code: 'RATE_LIMIT'
           }),
@@ -155,7 +155,7 @@ Be precise and extract only the information that is clearly visible on the label
       if (aiResponse.status === 402) {
         return new Response(
           JSON.stringify({ 
-            medications: [],
+            medication: null,
             error: 'AI quota exceeded. Please add credits or use manual entry.',
             error_code: 'PAYMENT_REQUIRED'
           }),
@@ -165,7 +165,7 @@ Be precise and extract only the information that is clearly visible on the label
 
       return new Response(
         JSON.stringify({ 
-          medications: [],
+          medication: null,
           error: 'OCR processing failed. Please try manual entry.',
           error_code: 'AI_ERROR'
         }),
@@ -176,18 +176,11 @@ Be precise and extract only the information that is clearly visible on the label
     const aiData = await aiResponse.json();
     console.log('Lovable AI response received');
 
-    const aiContent = aiData.choices?.[0]?.message?.content || '[]';
+    const aiContent = aiData.choices?.[0]?.message?.content || '{}';
     console.log('AI extracted content:', aiContent);
 
-    // Define the medication type
-    interface ExtractedMedication {
-      name: string;
-      dosage: string;
-      instructions: string;
-    }
-
-    // Parse the AI response to extract medications array
-    let medications: ExtractedMedication[] = [];
+    // Parse the AI response to extract single medication
+    let medication: { name: string; dosage: string; instructions: string } | null = null;
     try {
       // Clean the response - remove markdown code blocks if present
       let cleanedContent = aiContent.trim();
@@ -200,27 +193,25 @@ Be precise and extract only the information that is clearly visible on the label
       const parsedData = JSON.parse(cleanedContent);
       
       // Validate and transform the data structure
-      if (Array.isArray(parsedData)) {
-        medications = parsedData.map((med: any) => ({
-          name: med.medicationName || med.name || '',
-          dosage: med.dosage || '',
-          instructions: `${med.quantityInstruction || ''} ${med.frequencyInstruction || ''}`.trim() || 'As directed'
-        })).filter((med: ExtractedMedication) => med.name && med.dosage);
+      if (parsedData.medicationName) {
+        medication = {
+          name: parsedData.medicationName,
+          dosage: parsedData.dosage || '',
+          instructions: `${parsedData.quantityInstruction || ''} ${parsedData.frequencyInstruction || ''}`.trim() || 'As directed'
+        };
         
-        console.log(`Successfully extracted ${medications.length} medication(s)`);
+        console.log('Successfully extracted medication:', medication.name);
       } else {
-        console.error('AI response is not an array:', parsedData);
-        medications = [];
+        console.log('No medication found in AI response');
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       console.error('Raw content:', aiContent);
-      medications = [];
     }
 
     return new Response(
       JSON.stringify({ 
-        medications,
+        medication,
         raw_text: aiContent
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

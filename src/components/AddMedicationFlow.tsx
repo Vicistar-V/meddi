@@ -1,7 +1,4 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,32 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useMedications } from '@/hooks/useMedications';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertTriangle, Upload, FileText, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertTriangle, Upload, Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthProvider';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const medicationSchema = z.object({
-  name: z.string().trim().min(1, 'Medication name is required').max(100, 'Name must be less than 100 characters'),
-  dosage: z.string().trim().min(1, 'Dosage is required').max(50, 'Dosage must be less than 50 characters'),
-  instructions: z.string().trim().max(500, 'Instructions must be less than 500 characters').optional(),
-  time_to_take: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
-  days_of_week: z.array(z.string()).min(1, 'Select at least one day')
-});
+type FlowState = 'IDLE' | 'UPLOADING' | 'PROCESSING' | 'CONFIRMATION' | 'SAVING';
 
-type MedicationFormData = z.infer<typeof medicationSchema>;
+type FrequencyOption = 'once' | 'twice' | 'three' | 'asNeeded';
 
-interface ScannedMedication {
-  id: string;
+interface ConfirmationForm {
   name: string;
   dosage: string;
   instructions: string;
-  selected: boolean;
-  isEditing: boolean;
+  frequency: FrequencyOption;
+  times: string[];
+  days: string[];
 }
 
 interface AddMedicationFlowProps {
@@ -43,38 +33,78 @@ interface AddMedicationFlowProps {
 }
 
 const daysOfWeek = [
-  { value: 'mon', label: 'Monday' },
-  { value: 'tue', label: 'Tuesday' },
-  { value: 'wed', label: 'Wednesday' },
-  { value: 'thu', label: 'Thursday' },
-  { value: 'fri', label: 'Friday' },
-  { value: 'sat', label: 'Saturday' },
-  { value: 'sun', label: 'Sunday' }
+  { value: 'mon', label: 'Mon' },
+  { value: 'tue', label: 'Tue' },
+  { value: 'wed', label: 'Wed' },
+  { value: 'thu', label: 'Thu' },
+  { value: 'fri', label: 'Fri' },
+  { value: 'sat', label: 'Sat' },
+  { value: 'sun', label: 'Sun' }
 ];
 
+const frequencyOptions: { value: FrequencyOption; label: string; timeCount: number }[] = [
+  { value: 'once', label: 'Once a Day', timeCount: 1 },
+  { value: 'twice', label: 'Twice a Day', timeCount: 2 },
+  { value: 'three', label: '3 Times a Day', timeCount: 3 },
+  { value: 'asNeeded', label: 'As Needed', timeCount: 0 }
+];
+
+const inferFrequency = (frequencyText: string): FrequencyOption => {
+  const lower = frequencyText.toLowerCase();
+  if (lower.includes('bid') || lower.includes('twice')) return 'twice';
+  if (lower.includes('tid') || lower.includes('three') || lower.includes('3')) return 'three';
+  if (lower.includes('qid') || lower.includes('four') || lower.includes('4')) return 'three'; // Default to 3x for simplicity
+  if (lower.includes('prn') || lower.includes('needed')) return 'asNeeded';
+  return 'once';
+};
+
 export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps) => {
-  const [isChecking, setIsChecking] = useState(false);
-  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [flowState, setFlowState] = useState<FlowState>('IDLE');
+  const [confirmationForm, setConfirmationForm] = useState<ConfirmationForm>({
+    name: '',
+    dosage: '',
+    instructions: '',
+    frequency: 'once',
+    times: ['08:00'],
+    days: []
+  });
   const [interactions, setInteractions] = useState<any[]>([]);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [scannedMedications, setScannedMedications] = useState<ScannedMedication[]>([]);
-  const [showReview, setShowReview] = useState(false);
-  const [scheduleTime, setScheduleTime] = useState('08:00');
-  const [scheduleDays, setScheduleDays] = useState<string[]>([]);
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
+
   const { addMedication, addSchedule } = useMedications();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const form = useForm<MedicationFormData>({
-    resolver: zodResolver(medicationSchema),
-    defaultValues: {
+  // Manual entry form state
+  const [manualForm, setManualForm] = useState({
+    name: '',
+    dosage: '',
+    instructions: '',
+    time: '08:00',
+    days: [] as string[]
+  });
+
+  const resetAndClose = () => {
+    setFlowState('IDLE');
+    setConfirmationForm({
       name: '',
       dosage: '',
       instructions: '',
-      time_to_take: '08:00',
-      days_of_week: []
-    }
-  });
+      frequency: 'once',
+      times: ['08:00'],
+      days: []
+    });
+    setManualForm({
+      name: '',
+      dosage: '',
+      instructions: '',
+      time: '08:00',
+      days: []
+    });
+    setInteractions([]);
+    setShowInteractionModal(false);
+    onOpenChange(false);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -98,8 +128,8 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
       return;
     }
 
-    setUploadedFile(file);
-    setIsProcessingOCR(true);
+    // State: UPLOADING
+    setFlowState('UPLOADING');
 
     try {
       const fileExt = file.name.split('.').pop();
@@ -111,13 +141,16 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
 
       if (uploadError) throw uploadError;
 
+      // State: PROCESSING
+      setFlowState('PROCESSING');
+
       const { data: ocrData, error: ocrError } = await supabase.functions.invoke('ocr-processor', {
         body: { image_path: fileName }
       });
 
       if (ocrError) throw ocrError;
 
-      // Handle specific error codes from OCR processor
+      // Handle specific error codes
       if (ocrData?.error_code) {
         let errorMessage = ocrData.error;
         if (ocrData.error_code === 'RATE_LIMIT') {
@@ -131,625 +164,508 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
           title: 'Scanning failed',
           description: errorMessage
         });
+        setFlowState('IDLE');
         return;
       }
 
-      if (ocrData?.medications && ocrData.medications.length > 0) {
-        const medications: ScannedMedication[] = ocrData.medications.map((med: any, idx: number) => ({
-          id: `${Date.now()}-${idx}`,
+      // Check if medication was found
+      if (ocrData?.medication && ocrData.medication.name) {
+        const med = ocrData.medication;
+        
+        // Pre-populate confirmation form
+        setConfirmationForm({
           name: med.name,
           dosage: med.dosage,
           instructions: med.instructions,
-          selected: true,
-          isEditing: false
-        }));
+          frequency: inferFrequency(med.instructions),
+          times: ['08:00'],
+          days: []
+        });
 
-        setScannedMedications(medications);
-        setShowReview(true);
+        // State: CONFIRMATION
+        setFlowState('CONFIRMATION');
         
         toast({
-          title: `Found ${medications.length} medication${medications.length > 1 ? 's' : ''}!`,
-          description: 'Review and edit before adding'
+          title: 'Medication detected!',
+          description: 'Review and confirm the details below'
         });
       } else {
         toast({
           variant: 'destructive',
-          title: 'No medications detected',
-          description: 'Please try another label or enter manually'
+          title: 'No medication detected',
+          description: 'Please ensure the label is clearly visible or try manual entry'
         });
+        setFlowState('IDLE');
       }
     } catch (error: any) {
       console.error('OCR processing error:', error);
       toast({
         variant: 'destructive',
         title: 'Scanning failed',
-        description: 'Please enter medication details manually'
+        description: 'Please try again or enter medication details manually'
       });
-    } finally {
-      setIsProcessingOCR(false);
+      setFlowState('IDLE');
     }
   };
 
-  const toggleMedicationSelection = (id: string) => {
-    setScannedMedications(prev =>
-      prev.map(med => med.id === id ? { ...med, selected: !med.selected } : med)
-    );
-  };
-
-  const toggleMedicationEdit = (id: string) => {
-    setScannedMedications(prev =>
-      prev.map(med => med.id === id ? { ...med, isEditing: !med.isEditing } : med)
-    );
-  };
-
-  const updateMedication = (id: string, field: keyof ScannedMedication, value: string) => {
-    setScannedMedications(prev =>
-      prev.map(med => med.id === id ? { ...med, [field]: value } : med)
-    );
-  };
-
-  const removeMedication = (id: string) => {
-    setScannedMedications(prev => prev.filter(med => med.id !== id));
-  };
-
-  const handleAddSelectedMedications = async () => {
-    const selected = scannedMedications.filter(med => med.selected);
+  const handleFrequencyChange = (frequency: FrequencyOption) => {
+    const option = frequencyOptions.find(o => o.value === frequency)!;
+    const newTimes = Array(option.timeCount).fill('08:00').map((_, i) => {
+      if (i === 0) return '08:00';
+      if (i === 1) return '20:00';
+      if (i === 2) return '14:00';
+      return '08:00';
+    });
     
-    if (selected.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'No medications selected',
-        description: 'Please select at least one medication'
-      });
+    setConfirmationForm(prev => ({
+      ...prev,
+      frequency,
+      times: newTimes
+    }));
+  };
+
+  const handleTimeChange = (index: number, value: string) => {
+    setConfirmationForm(prev => ({
+      ...prev,
+      times: prev.times.map((t, i) => i === index ? value : t)
+    }));
+  };
+
+  const toggleDay = (day: string) => {
+    setConfirmationForm(prev => ({
+      ...prev,
+      days: prev.days.includes(day)
+        ? prev.days.filter(d => d !== day)
+        : [...prev.days, day]
+    }));
+  };
+
+  const handleSaveClick = async () => {
+    // Validation
+    if (!confirmationForm.name.trim()) {
+      toast({ variant: 'destructive', title: 'Medication name is required' });
+      return;
+    }
+    if (confirmationForm.frequency !== 'asNeeded' && confirmationForm.days.length === 0) {
+      toast({ variant: 'destructive', title: 'Please select at least one day' });
       return;
     }
 
-    if (scheduleDays.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'No days selected',
-        description: 'Please select at least one day'
-      });
-      return;
-    }
-
-    setIsChecking(true);
+    // State: SAVING
+    setFlowState('SAVING');
 
     try {
-      // Check interactions for all selected medications
-      const allInteractions: any[] = [];
-      for (const med of selected) {
-        const { data: interactionData } = await supabase.functions.invoke('drug-interaction-checker', {
-          body: { medication_name: med.name }
-        });
+      // Step 1: Check drug interactions
+      const { data: interactionData } = await supabase.functions.invoke('drug-interaction-checker', {
+        body: { medication_name: confirmationForm.name }
+      });
 
-        if (interactionData?.interactions && interactionData.interactions.length > 0) {
-          allInteractions.push(...interactionData.interactions);
-        }
-      }
-
-      if (allInteractions.length > 0) {
-        setInteractions(allInteractions);
-        setIsChecking(false);
+      // Step 2: Handle interaction response
+      if (interactionData?.interactions && interactionData.interactions.length > 0) {
+        setInteractions(interactionData.interactions);
+        setShowInteractionModal(true);
+        setFlowState('CONFIRMATION'); // Return to form
         return;
       }
 
-      // Add all medications
-      for (const med of selected) {
-        const medication = await addMedication.mutateAsync({
-          name: med.name,
-          dosage: med.dosage,
-          instructions: med.instructions || null,
-          pill_image_url: null
-        });
-
-        await addSchedule.mutateAsync({
-          medication_id: medication.id,
-          time_to_take: scheduleTime,
-          days_of_week: scheduleDays
-        });
-      }
-
-      toast({
-        title: `${selected.length} medication${selected.length > 1 ? 's' : ''} added`,
-        description: 'Your medications have been added successfully'
+      // Step 3: No interactions - save medication
+      const medication = await addMedication.mutateAsync({
+        name: confirmationForm.name,
+        dosage: confirmationForm.dosage,
+        instructions: confirmationForm.instructions || null,
+        pill_image_url: null
       });
 
-      resetFlow();
+      // Step 4: Create schedules based on frequency
+      if (confirmationForm.frequency !== 'asNeeded') {
+        for (const time of confirmationForm.times) {
+          await addSchedule.mutateAsync({
+            medication_id: medication.id,
+            time_to_take: time,
+            days_of_week: confirmationForm.days
+          });
+        }
+      }
+
+      // Step 5: Success!
+      toast({ title: 'Medication added successfully!' });
+      resetAndClose();
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to add medications'
+        description: error.message || 'Failed to add medication'
       });
-    } finally {
-      setIsChecking(false);
+      setFlowState('CONFIRMATION');
     }
   };
 
-  const resetFlow = () => {
-    setScannedMedications([]);
-    setShowReview(false);
-    setUploadedFile(null);
-    setScheduleTime('08:00');
-    setScheduleDays([]);
-    setInteractions([]);
-    form.reset();
-    onOpenChange(false);
-  };
+  const handleManualSubmit = async () => {
+    // Validation
+    if (!manualForm.name.trim()) {
+      toast({ variant: 'destructive', title: 'Medication name is required' });
+      return;
+    }
+    if (!manualForm.dosage.trim()) {
+      toast({ variant: 'destructive', title: 'Dosage is required' });
+      return;
+    }
+    if (manualForm.days.length === 0) {
+      toast({ variant: 'destructive', title: 'Please select at least one day' });
+      return;
+    }
 
-  const onSubmit = async (data: MedicationFormData) => {
+    setFlowState('SAVING');
+
     try {
-      setIsChecking(true);
-      
-      const { data: interactionData, error: interactionError } = await supabase.functions.invoke('drug-interaction-checker', {
-        body: { medication_name: data.name }
+      // Check interactions
+      const { data: interactionData } = await supabase.functions.invoke('drug-interaction-checker', {
+        body: { medication_name: manualForm.name }
       });
 
-      if (interactionError) {
-        console.error('Interaction check failed:', interactionError);
-      } else if (interactionData?.interactions && interactionData.interactions.length > 0) {
+      if (interactionData?.interactions && interactionData.interactions.length > 0) {
         setInteractions(interactionData.interactions);
-        setIsChecking(false);
+        setShowInteractionModal(true);
+        setFlowState('IDLE');
         return;
       }
 
+      // Save medication
       const medication = await addMedication.mutateAsync({
-        name: data.name,
-        dosage: data.dosage,
-        instructions: data.instructions || null,
+        name: manualForm.name,
+        dosage: manualForm.dosage,
+        instructions: manualForm.instructions || null,
         pill_image_url: null
       });
 
       await addSchedule.mutateAsync({
         medication_id: medication.id,
-        time_to_take: data.time_to_take,
-        days_of_week: data.days_of_week
+        time_to_take: manualForm.time,
+        days_of_week: manualForm.days
       });
 
-      toast({
-        title: 'Medication added',
-        description: 'Your medication has been added successfully'
-      });
-
-      resetFlow();
+      toast({ title: 'Medication added successfully!' });
+      resetAndClose();
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: error.message || 'Failed to add medication'
       });
-    } finally {
-      setIsChecking(false);
+      setFlowState('IDLE');
     }
   };
 
-  const handleConfirmWithInteractions = async () => {
-    const selected = scannedMedications.filter(med => med.selected);
-    
-    try {
-      if (selected.length > 0) {
-        // Batch add from scan
-        for (const med of selected) {
-          const medication = await addMedication.mutateAsync({
-            name: med.name,
-            dosage: med.dosage,
-            instructions: med.instructions || null,
-            pill_image_url: null
-          });
-
-          await addSchedule.mutateAsync({
-            medication_id: medication.id,
-            time_to_take: scheduleTime,
-            days_of_week: scheduleDays
-          });
-        }
-
-        toast({
-          title: `${selected.length} medication${selected.length > 1 ? 's' : ''} added`,
-          description: 'Please consult your doctor about the warnings.'
-        });
-      } else {
-        // Single manual add
-        const data = form.getValues();
-        const medication = await addMedication.mutateAsync({
-          name: data.name,
-          dosage: data.dosage,
-          instructions: data.instructions || null,
-          pill_image_url: null
-        });
-
-        await addSchedule.mutateAsync({
-          medication_id: medication.id,
-          time_to_take: data.time_to_take,
-          days_of_week: data.days_of_week
-        });
-
-        toast({
-          title: 'Medication added',
-          description: 'Please consult your doctor about the warnings.'
-        });
-      }
-
-      resetFlow();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to add medication'
-      });
-    }
+  const toggleManualDay = (day: string) => {
+    setManualForm(prev => ({
+      ...prev,
+      days: prev.days.includes(day)
+        ? prev.days.filter(d => d !== day)
+        : [...prev.days, day]
+    }));
   };
 
-  if (interactions.length > 0) {
+  // Render: Interaction Warning Modal (Blocking)
+  if (showInteractionModal && interactions.length > 0) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+      <AlertDialog open={showInteractionModal} onOpenChange={setShowInteractionModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Drug Interaction Warnings
-            </DialogTitle>
-            <DialogDescription>
-              Potential interactions have been detected with your current medications
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+              CRITICAL SAFETY WARNING
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This medication may interact with your current medications:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
             {interactions.map((interaction, idx) => (
               <Alert key={idx} variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>{interaction.drug}</AlertTitle>
-                <AlertDescription>{interaction.warning}</AlertDescription>
+                <AlertTitle className="text-sm font-semibold">{interaction.drug}</AlertTitle>
+                <AlertDescription className="text-xs">{interaction.warning}</AlertDescription>
               </Alert>
             ))}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setInteractions([])}>
-                Go Back
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmWithInteractions}>
-                Add Anyway (Consult Doctor)
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          <AlertDialogFooter>
+            <Button
+              onClick={() => {
+                setShowInteractionModal(false);
+                setInteractions([]);
+              }}
+            >
+              I Understand, Go Back
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
-  if (showReview && scannedMedications.length > 0) {
+  // Render: CONFIRMATION State
+  if (flowState === 'CONFIRMATION') {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={resetAndClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Review Detected Medications</DialogTitle>
+            <DialogTitle>Confirm Medication Details</DialogTitle>
             <DialogDescription>
-              {scannedMedications.filter(m => m.selected).length} of {scannedMedications.length} selected
+              Review the detected information and add scheduling details
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Medication</TableHead>
-                    <TableHead>Dosage</TableHead>
-                    <TableHead>Instructions</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {scannedMedications.map((med) => (
-                    <TableRow key={med.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={med.selected}
-                          onCheckedChange={() => toggleMedicationSelection(med.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {med.isEditing ? (
-                          <Input
-                            value={med.name}
-                            onChange={(e) => updateMedication(med.id, 'name', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          <span className="font-medium">{med.name}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {med.isEditing ? (
-                          <Input
-                            value={med.dosage}
-                            onChange={(e) => updateMedication(med.id, 'dosage', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          med.dosage
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {med.isEditing ? (
-                          <Input
-                            value={med.instructions}
-                            onChange={(e) => updateMedication(med.id, 'instructions', e.target.value)}
-                            className="h-8"
-                          />
-                        ) : (
-                          <span className="text-sm text-muted-foreground">{med.instructions}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => toggleMedicationEdit(med.id)}
-                          >
-                            {med.isEditing ? <CheckCircle2 className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => removeMedication(med.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
-              <div>
-                <Label>Time to Take (for all selected)</Label>
+          <div className="space-y-6">
+            {/* Section 1: AI-Extracted (Editable) */}
+            <div className="space-y-4 border-b pb-4">
+              <h3 className="font-semibold text-sm text-muted-foreground">Medication Information</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm-name">Medication Name</Label>
                 <Input
-                  type="time"
-                  value={scheduleTime}
-                  onChange={(e) => setScheduleTime(e.target.value)}
-                  className="mt-2"
+                  id="confirm-name"
+                  value={confirmationForm.name}
+                  onChange={(e) => setConfirmationForm(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label>Days of Week (for all selected)</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {daysOfWeek.map((day) => (
-                    <div key={day.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={scheduleDays.includes(day.value)}
-                        onCheckedChange={(checked) => {
-                          setScheduleDays(prev =>
-                            checked
-                              ? [...prev, day.value]
-                              : prev.filter(d => d !== day.value)
-                          );
-                        }}
-                      />
-                      <Label className="font-normal cursor-pointer text-sm">{day.label}</Label>
-                    </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-dosage">Dosage</Label>
+                <Input
+                  id="confirm-dosage"
+                  value={confirmationForm.dosage}
+                  onChange={(e) => setConfirmationForm(prev => ({ ...prev, dosage: e.target.value }))}
+                  placeholder="e.g., 100mg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-instructions">Instructions</Label>
+                <Textarea
+                  id="confirm-instructions"
+                  value={confirmationForm.instructions}
+                  onChange={(e) => setConfirmationForm(prev => ({ ...prev, instructions: e.target.value }))}
+                  placeholder="e.g., Take one tablet twice daily"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Section 2: Scheduling (Required) */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground">Scheduling</h3>
+
+              <div className="space-y-2">
+                <Label>How often do you take this?</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {frequencyOptions.map(option => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={confirmationForm.frequency === option.value ? 'default' : 'outline'}
+                      onClick={() => handleFrequencyChange(option.value)}
+                    >
+                      {option.label}
+                    </Button>
                   ))}
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowReview(false)}>
-                Back to Upload
-              </Button>
-              <Button onClick={handleAddSelectedMedications} disabled={isChecking}>
-                {isChecking ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Checking...
-                  </>
-                ) : (
-                  `Add ${scannedMedications.filter(m => m.selected).length} Selected`
-                )}
-              </Button>
+              {confirmationForm.frequency !== 'asNeeded' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>At what time(s)?</Label>
+                    {confirmationForm.times.map((time, index) => (
+                      <Input
+                        key={index}
+                        type="time"
+                        value={time}
+                        onChange={(e) => handleTimeChange(index, e.target.value)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Which days?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {daysOfWeek.map(day => (
+                        <Button
+                          key={day.value}
+                          type="button"
+                          size="sm"
+                          variant={confirmationForm.days.includes(day.value) ? 'default' : 'outline'}
+                          onClick={() => toggleDay(day.value)}
+                        >
+                          {day.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={resetAndClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveClick}
+              disabled={flowState !== 'CONFIRMATION'}
+              className="flex-1"
+            >
+              {flowState !== 'CONFIRMATION' ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Checking safety...
+                </>
+              ) : (
+                'Save Medication'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
     );
   }
 
+  // Render: IDLE, UPLOADING, PROCESSING States
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Medication</DialogTitle>
-          <DialogDescription>
-            Scan a pharmacy pill bottle label or enter details manually
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={resetAndClose}>
+      <DialogContent className="max-w-2xl">
+        {(flowState === 'UPLOADING' || flowState === 'PROCESSING') && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-lg font-medium">
+              {flowState === 'UPLOADING' ? 'Uploading your image securely...' : 'AI is analyzing your label... this may take a moment.'}
+            </p>
+          </div>
+        )}
 
-        <Tabs defaultValue="scan" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="scan">
-              <Upload className="mr-2 h-4 w-4" />
-              Scan Pharmacy Label
-            </TabsTrigger>
-            <TabsTrigger value="manual">
-              <FileText className="mr-2 h-4 w-4" />
-              Enter Manually
-            </TabsTrigger>
-          </TabsList>
+        {flowState === 'IDLE' && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add a New Medication</DialogTitle>
+              <DialogDescription>
+                Scan your pharmacy pill bottle label or enter details manually
+              </DialogDescription>
+            </DialogHeader>
 
-          <TabsContent value="scan" className="space-y-4">
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <Label htmlFor="prescription-upload" className="cursor-pointer">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Upload pharmacy pill bottle label</p>
+            <Tabs defaultValue="scan" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="scan">Scan Pharmacy Label</TabsTrigger>
+                <TabsTrigger value="manual">Enter Manually</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="scan" className="space-y-4">
+                <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-4">
+                  <div className="flex flex-col items-center gap-2">
+                    <Camera className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      For best results, place your pill bottle on a flat surface in a well-lit area
+                    </p>
+                  </div>
+                  
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      id="file-upload"
+                    />
+                    <Button className="w-full" size="lg">
+                      <Upload className="mr-2 h-5 w-5" />
+                      Scan Pharmacy Label
+                    </Button>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">
                     Works best with printed pharmacy labels
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG up to 10MB • Supports multiple medications
-                  </p>
                 </div>
-                <Input
-                  id="prescription-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  disabled={isProcessingOCR}
-                />
-                <Button type="button" className="mt-4" disabled={isProcessingOCR}>
-                  {isProcessingOCR ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Choose File'
-                  )}
-                </Button>
-              </Label>
-              {uploadedFile && (
-                <p className="mt-4 text-sm text-muted-foreground">
-                  Uploaded: {uploadedFile.name}
-                </p>
-              )}
-            </div>
-            {isProcessingOCR && (
-              <Alert>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertTitle>Processing label...</AlertTitle>
-                <AlertDescription>
-                  AI is extracting medication details from your pharmacy label
-                </AlertDescription>
-              </Alert>
-            )}
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="manual">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Medication Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Lisinopril" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="manual" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-name">Medication Name *</Label>
+                    <Input
+                      id="manual-name"
+                      value={manualForm.name}
+                      onChange={(e) => setManualForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Lisinopril"
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="dosage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dosage</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 10mg" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-dosage">Dosage *</Label>
+                    <Input
+                      id="manual-dosage"
+                      value={manualForm.dosage}
+                      onChange={(e) => setManualForm(prev => ({ ...prev, dosage: e.target.value }))}
+                      placeholder="e.g., 20mg"
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="instructions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Instructions (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="e.g., Take one tablet by mouth daily with food"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-instructions">Instructions</Label>
+                    <Textarea
+                      id="manual-instructions"
+                      value={manualForm.instructions}
+                      onChange={(e) => setManualForm(prev => ({ ...prev, instructions: e.target.value }))}
+                      placeholder="e.g., Take one tablet once daily"
+                      rows={3}
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="time_to_take"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time to Take</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-time">Time to Take *</Label>
+                    <Input
+                      id="manual-time"
+                      type="time"
+                      value={manualForm.time}
+                      onChange={(e) => setManualForm(prev => ({ ...prev, time: e.target.value }))}
+                    />
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="days_of_week"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Days of Week</FormLabel>
-                      <div className="grid grid-cols-2 gap-3">
-                        {daysOfWeek.map((day) => (
-                          <FormField
-                            key={day.value}
-                            control={form.control}
-                            name="days_of_week"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(day.value)}
-                                    onCheckedChange={(checked) => {
-                                      const updatedValue = checked
-                                        ? [...(field.value || []), day.value]
-                                        : field.value?.filter((v) => v !== day.value) || [];
-                                      field.onChange(updatedValue);
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer">
-                                  {day.label}
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <div className="space-y-2">
+                    <Label>Days of Week *</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {daysOfWeek.map(day => (
+                        <Button
+                          key={day.value}
+                          type="button"
+                          size="sm"
+                          variant={manualForm.days.includes(day.value) ? 'default' : 'outline'}
+                          onClick={() => toggleManualDay(day.value)}
+                        >
+                          {day.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isChecking || addMedication.isPending}>
-                    {isChecking || addMedication.isPending ? (
+                  <Button
+                    onClick={handleManualSubmit}
+                    disabled={flowState !== 'IDLE'}
+                    className="w-full"
+                  >
+                    {flowState !== 'IDLE' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isChecking ? 'Checking interactions...' : 'Adding...'}
+                        Adding...
                       </>
                     ) : (
                       'Add Medication'
                     )}
                   </Button>
                 </div>
-              </form>
-            </Form>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
