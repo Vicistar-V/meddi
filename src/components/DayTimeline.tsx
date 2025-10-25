@@ -1,135 +1,279 @@
-import { Check, Clock, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { DoseGroup, getDoseStatus, formatTimeDisplay, TimeOfDay } from '@/lib/medicationHelpers';
+import { useState } from 'react';
+import { Clock, Sparkles, CheckCircle2, Calendar } from 'lucide-react';
+import { DoseGroup, getDoseStatus } from '@/lib/medicationHelpers';
 import { MedicationLog } from '@/hooks/useMedications';
+import { groupDosesByProximity } from '@/lib/timeHelpers';
+import { DailyProgress } from '@/components/timeline/DailyProgress';
+import { TimelineSection } from '@/components/timeline/TimelineSection';
+import { DoseCard } from '@/components/timeline/DoseCard';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface DayTimelineProps {
-  dosesTimeline: Map<TimeOfDay, DoseGroup[]>;
+  dosesTimeline: Map<string, DoseGroup[]>;
   todayLogs: MedicationLog[];
   currentTime?: Date;
-  onDoseClick?: (dose: DoseGroup) => void;
+  onDoseComplete?: () => void;
 }
 
 export const DayTimeline = ({ 
   dosesTimeline, 
   todayLogs,
   currentTime = new Date(),
-  onDoseClick 
+  onDoseComplete
 }: DayTimelineProps) => {
-  const timeOfDayOrder: TimeOfDay[] = ['Morning', 'Afternoon', 'Evening'];
+  const [completedOpen, setCompletedOpen] = useState(false);
 
-  const hasAnyDoses = Array.from(dosesTimeline.values()).some(doses => doses.length > 0);
+  // Get all doses in a flat array
+  const allDoses = Array.from(dosesTimeline.values()).flat();
 
-  if (!hasAnyDoses) {
+  if (allDoses.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed p-8 text-center">
-        <Clock className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
-        <p className="text-muted-foreground">
-          No medications scheduled for today
-        </p>
+      <div className="rounded-xl border-2 border-dashed bg-gradient-to-br from-background to-secondary/20 p-12 text-center">
+        <div className="mx-auto max-w-sm space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Calendar className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold">All Clear for Today!</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You have no medications scheduled right now.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate stats for all doses
+  const doseStatuses = allDoses.map(dose => {
+    const scheduleIds = dose.schedules.map(s => s.schedule.id);
+    return getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
+  });
+
+  const totalDoses = allDoses.length;
+  const completedDoses = doseStatuses.filter(s => s === 'completed').length;
+  const missedDoses = doseStatuses.filter(s => s === 'missed').length;
+  const upcomingDoses = totalDoses - completedDoses - missedDoses;
+
+  // Separate completed from active doses
+  const completedDosesList: Array<{ dose: DoseGroup; status: 'completed' }> = [];
+  const activeDosesList: Array<{ dose: DoseGroup; status: 'current' | 'upcoming' | 'missed' }> = [];
+
+  allDoses.forEach((dose, index) => {
+    const status = doseStatuses[index];
+    if (status === 'completed') {
+      completedDosesList.push({ dose, status });
+    } else {
+      activeDosesList.push({ dose, status: status as 'current' | 'upcoming' | 'missed' });
+    }
+  });
+
+  // Group active doses by proximity
+  const activeDoses = activeDosesList.map(item => item.dose);
+  const { now, next, later } = groupDosesByProximity(activeDoses, currentTime);
+
+  // Helper to find status for a dose
+  const getStatusForDose = (dose: DoseGroup) => {
+    const scheduleIds = dose.schedules.map(s => s.schedule.id);
+    return getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
+  };
+
+  // Handle marking a dose as taken
+  const handleMarkTaken = async (dose: DoseGroup) => {
+    // This will be handled by parent component via onDoseComplete
+    onDoseComplete?.();
+  };
+
+  // Check if all doses are completed
+  const allCompleted = completedDoses === totalDoses;
+
+  if (allCompleted) {
+    return (
+      <div className="space-y-6">
+        {/* Progress */}
+        <DailyProgress
+          totalDoses={totalDoses}
+          completedDoses={completedDoses}
+          missedDoses={missedDoses}
+          upcomingDoses={upcomingDoses}
+        />
+
+        {/* All Done Message */}
+        <div className="rounded-xl border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-8 text-center">
+          <div className="mx-auto max-w-sm space-y-4">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 animate-in zoom-in duration-500">
+              <Sparkles className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
+                Amazing Work! 🎉
+              </h3>
+              <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+                You've taken all your medications for today. Keep up the great streak!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Completed Section */}
+        <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between hover:bg-secondary/50"
+            >
+              <span className="text-sm font-medium">
+                View completed doses ({completedDoses})
+              </span>
+              <CheckCircle2 className={cn(
+                "h-4 w-4 transition-transform",
+                completedOpen && "rotate-180"
+              )} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-4">
+            {completedDosesList.map((item, index) => (
+              <div 
+                key={`${item.dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-top-2"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <DoseCard
+                  dose={item.dose}
+                  status={item.status}
+                  currentTime={currentTime}
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {timeOfDayOrder.map(timeOfDay => {
-        const doses = dosesTimeline.get(timeOfDay) || [];
-        
-        if (doses.length === 0) return null;
+      {/* Progress Bar */}
+      <DailyProgress
+        totalDoses={totalDoses}
+        completedDoses={completedDoses}
+        missedDoses={missedDoses}
+        upcomingDoses={upcomingDoses}
+      />
 
-        return (
-          <div key={timeOfDay} className="relative">
-            {/* Time of Day Label */}
-            <h3 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              {timeOfDay}
-            </h3>
+      {/* NOW Section - Current doses */}
+      {now.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <TimelineSection 
+            title="Now" 
+            subtitle="Take these medications"
+            icon={<Clock className="h-4 w-4" />}
+          >
+            {now.map((dose, index) => (
+              <div 
+                key={`${dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-left-4"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <DoseCard
+                  dose={dose}
+                  status={getStatusForDose(dose)}
+                  currentTime={currentTime}
+                  onMarkTaken={handleMarkTaken}
+                />
+              </div>
+            ))}
+          </TimelineSection>
+        </div>
+      )}
 
-            {/* Timeline */}
-            <div className="relative space-y-4 pl-8">
-              {/* Vertical Line */}
-              <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-border" />
+      {/* NEXT Section - Upcoming soon */}
+      {next.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <TimelineSection 
+            title="Next" 
+            subtitle="Coming up soon"
+            icon={<Clock className="h-4 w-4" />}
+          >
+            {next.map((dose, index) => (
+              <div 
+                key={`${dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-left-4"
+                style={{ animationDelay: `${(index + now.length) * 100}ms` }}
+              >
+                <DoseCard
+                  dose={dose}
+                  status={getStatusForDose(dose)}
+                  currentTime={currentTime}
+                  onMarkTaken={handleMarkTaken}
+                />
+              </div>
+            ))}
+          </TimelineSection>
+        </div>
+      )}
 
-              {doses.map((dose, index) => {
-                const scheduleIds = dose.schedules.map(s => s.schedule.id);
-                const status = getDoseStatus(dose.time, scheduleIds, todayLogs, currentTime);
-                const pillCount = dose.schedules.length;
+      {/* LATER Section - Rest of the day */}
+      {later.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <TimelineSection 
+            title="Later Today"
+            icon={<Calendar className="h-4 w-4" />}
+          >
+            {later.map((dose, index) => (
+              <div 
+                key={`${dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-left-4"
+                style={{ animationDelay: `${(index + now.length + next.length) * 100}ms` }}
+              >
+                <DoseCard
+                  dose={dose}
+                  status={getStatusForDose(dose)}
+                  currentTime={currentTime}
+                />
+              </div>
+            ))}
+          </TimelineSection>
+        </div>
+      )}
 
-                return (
-                  <div
-                    key={dose.time}
-                    className={cn(
-                      'relative cursor-pointer transition-all',
-                      onDoseClick && 'hover:translate-x-1'
-                    )}
-                    onClick={() => onDoseClick?.(dose)}
-                  >
-                    {/* Bubble */}
-                    <div
-                      className={cn(
-                        'absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all',
-                        status === 'completed' && 'border-green-500 bg-green-500',
-                        status === 'current' && 'border-primary bg-primary shadow-lg shadow-primary/30',
-                        status === 'upcoming' && 'border-border bg-background',
-                        status === 'missed' && 'border-red-500 bg-red-500'
-                      )}
-                    >
-                      {status === 'completed' && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                      {status === 'current' && (
-                        <Clock className="h-4 w-4 text-primary-foreground" />
-                      )}
-                      {status === 'upcoming' && (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      {status === 'missed' && (
-                        <AlertCircle className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="ml-12">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className={cn(
-                            'font-semibold',
-                            status === 'completed' && 'text-green-700 dark:text-green-400',
-                            status === 'current' && 'text-primary',
-                            status === 'missed' && 'text-red-700 dark:text-red-400'
-                          )}>
-                            {formatTimeDisplay(dose.time)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {pillCount} {pillCount === 1 ? 'pill' : 'pills'}
-                          </p>
-                        </div>
-
-                        {status === 'completed' && (
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                            Completed
-                          </span>
-                        )}
-                        {status === 'missed' && (
-                          <span className="text-xs font-medium text-red-600 dark:text-red-400">
-                            Missed
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Medication Names (preview) */}
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {dose.schedules.slice(0, 2).map(item => item.medication.name).join(', ')}
-                        {dose.schedules.length > 2 && ` +${dose.schedules.length - 2} more`}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      {/* COMPLETED Section - Collapsible */}
+      {completedDosesList.length > 0 && (
+        <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between hover:bg-secondary/50"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                Completed ({completedDoses})
+              </span>
+              <CheckCircle2 className={cn(
+                "h-4 w-4 transition-transform",
+                completedOpen && "rotate-180"
+              )} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 pt-4">
+            {completedDosesList.map((item, index) => (
+              <div 
+                key={`${item.dose.time}-${index}`}
+                className="animate-in fade-in slide-in-from-top-2"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <DoseCard
+                  dose={item.dose}
+                  status={item.status}
+                  currentTime={currentTime}
+                />
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 };
