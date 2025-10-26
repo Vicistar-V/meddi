@@ -131,7 +131,7 @@ const Dashboard = () => {
       <>
         <Navbar onAddClick={() => setShowAddFlow(true)} />
         <main className="container mx-auto px-4 py-6 pb-32">
-          <Card className="border-2 bg-gradient-cream p-12 text-center">
+          <Card className="border-2 bg-gradient-butter shadow-honey p-12 text-center">
             <div className="mx-auto max-w-sm space-y-6">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
                 <Plus className="h-10 w-10 text-primary" />
