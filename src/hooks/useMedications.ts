@@ -43,7 +43,9 @@ export const useMedications = () => {
       if (error) throw error;
       return data as Medication[];
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: false, // Don't poll
   });
 
   const { data: schedules = [] } = useQuery({
@@ -56,7 +58,9 @@ export const useMedications = () => {
       if (error) throw error;
       return data as Schedule[];
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: false,
   });
 
   const { data: todayLogs = [] } = useQuery({
@@ -74,7 +78,9 @@ export const useMedications = () => {
       if (error) throw error;
       return data as MedicationLog[];
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 1 * 60 * 1000, // 1 minute (fresher data)
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 
   const addMedication = useMutation({
@@ -89,7 +95,10 @@ export const useMedications = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['medications'] });
+      // Only invalidate medications list for this user
+      queryClient.invalidateQueries({ 
+        queryKey: ['medications', user!.id] 
+      });
     }
   });
 
@@ -105,7 +114,10 @@ export const useMedications = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      // Only invalidate schedules for this user
+      queryClient.invalidateQueries({ 
+        queryKey: ['schedules', user!.id] 
+      });
     }
   });
 
@@ -120,8 +132,51 @@ export const useMedications = () => {
       if (error) throw error;
       return data;
     },
+    // Optimistic update for instant UI feedback
+    onMutate: async (newLog) => {
+      const today = new Date().toDateString();
+      const queryKey = ['medication-logs', user!.id, today];
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot previous value
+      const previousLogs = queryClient.getQueryData<MedicationLog[]>(queryKey);
+      
+      // Optimistically update cache
+      queryClient.setQueryData<MedicationLog[]>(queryKey, (old = []) => [
+        ...old,
+        {
+          id: 'temp-' + Date.now(),
+          ...newLog,
+          user_id: user!.id,
+          taken_at: new Date().toISOString(),
+        } as MedicationLog,
+      ]);
+      
+      return { previousLogs };
+    },
+    // Rollback on error
+    onError: (err, newLog, context) => {
+      const today = new Date().toDateString();
+      queryClient.setQueryData(
+        ['medication-logs', user!.id, today],
+        context?.previousLogs
+      );
+    },
+    // Invalidate on success to get real server data
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['medication-logs'] });
+      const today = new Date().toDateString();
+      
+      // Only invalidate today's logs
+      queryClient.invalidateQueries({ 
+        queryKey: ['medication-logs', user!.id, today] 
+      });
+      
+      // Invalidate history data (includes past logs)
+      queryClient.invalidateQueries({ 
+        queryKey: ['simple-history'] 
+      });
     }
   });
 
@@ -144,8 +199,16 @@ export const useMedications = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['medications'] });
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['medications', user!.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['schedules', user!.id] 
+      });
+      // Invalidate history since it depends on medications
+      queryClient.invalidateQueries({ 
+        queryKey: ['simple-history'] 
+      });
     }
   });
 
@@ -162,7 +225,16 @@ export const useMedications = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      // Only invalidate schedules, not medications
+      queryClient.invalidateQueries({ 
+        queryKey: ['schedules', user!.id] 
+      });
+      
+      // Invalidate today's logs (schedule change affects what's due)
+      const today = new Date().toDateString();
+      queryClient.invalidateQueries({ 
+        queryKey: ['medication-logs', user!.id, today] 
+      });
     }
   });
 
@@ -176,7 +248,9 @@ export const useMedications = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['schedules', user!.id] 
+      });
     }
   });
 

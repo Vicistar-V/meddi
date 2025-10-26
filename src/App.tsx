@@ -13,7 +13,33 @@ import Verify from "./pages/Verify";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Cache data for 5 minutes before considering it stale
+      staleTime: 5 * 60 * 1000,
+      
+      // Keep unused data in cache for 10 minutes
+      gcTime: 10 * 60 * 1000,
+      
+      // Retry failed queries 1 time
+      retry: 1,
+      
+      // Don't refetch on window focus (too aggressive for medical data)
+      refetchOnWindowFocus: false,
+      
+      // Don't refetch on mount if data is fresh
+      refetchOnMount: false,
+      
+      // Refetch on reconnect if data exists
+      refetchOnReconnect: 'always',
+    },
+    mutations: {
+      // Retry failed mutations once
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

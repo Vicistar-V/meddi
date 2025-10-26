@@ -13,7 +13,7 @@ import { CompactTimeline } from '@/components/dashboard/CompactTimeline';
 import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard';
 import { DailyStatsCard } from '@/components/dashboard/DailyStatsCard';
 import { useMedications } from '@/hooks/useMedications';
-import { useAuth } from '@/context/AuthProvider';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { getNextDose, getDosesByTimeOfDay, getDoseStatus } from '@/lib/medicationHelpers';
 import { 
   calculateDailyProgress, 
@@ -24,37 +24,52 @@ import {
 } from '@/lib/dashboardStats';
 import { useToast } from '@/hooks/use-toast';
 import { DoseGroup } from '@/lib/medicationHelpers';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { startOfDay, endOfDay, subDays, startOfWeek, format, isSameDay } from 'date-fns';
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { medications, schedules, todayLogs, logMedication } = useMedications();
-  const { user } = useAuth();
-
-  // Fetch user profile for guest username
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id
-  });
+  const { data: userProfile } = useUserProfile();
 
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Prefetch history data for faster navigation
+  useEffect(() => {
+    if (userProfile?.user?.id) {
+      queryClient.prefetchQuery({
+        queryKey: ['simple-history', userProfile.user.id, 30],
+        queryFn: async () => {
+          const daysBack = 30;
+          const endDate = endOfDay(new Date());
+          const startDate = startOfDay(subDays(endDate, daysBack - 1));
+
+          const { data: logs } = await supabase
+            .from('medication_logs')
+            .select('*, schedules(*, medications(*))')
+            .eq('user_id', userProfile.user.id)
+            .gte('taken_at', startDate.toISOString())
+            .lte('taken_at', endDate.toISOString());
+
+          const { data: schedules } = await supabase
+            .from('schedules')
+            .select('*, medications(*)')
+            .eq('user_id', userProfile.user.id);
+
+          return { logs, schedules };
+        },
+      });
+    }
+  }, [userProfile?.user?.id, queryClient]);
 
   // Calculate data
   const nextDose = getNextDose(medications, schedules, todayLogs, currentTime);
@@ -87,10 +102,7 @@ const Dashboard = () => {
   const allDoses = Array.from(dosesTimeline.values()).flat();
   const onTimePercentage = getOnTimePercentage(allDoses, todayLogs, currentTime);
 
-  // Get user name - check profile first (for guests), then user_metadata (for regular users)
-  const userName = profile?.full_name?.split(' ')[0] 
-    || user?.user_metadata?.full_name?.split(' ')[0] 
-    || 'there';
+  const userName = userProfile?.displayName || 'there';
 
   // Handle marking dose as taken
   const handleMarkTaken = async (dose: DoseGroup) => {

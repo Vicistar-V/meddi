@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthProvider';
 import { startOfDay, endOfDay, subDays, startOfWeek, format, isSameDay } from 'date-fns';
 
 export type DayAdherence = 'perfect' | 'partial' | 'none' | 'no-schedule';
@@ -33,13 +34,7 @@ export interface SimpleHistoryData {
 }
 
 export const useSimpleHistory = (daysBack: number = 30) => {
-  const { data: user } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getUser();
-      return data.user;
-    },
-  });
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: ['simple-history', user?.id, daysBack],
@@ -175,5 +170,7 @@ export const useSimpleHistory = (daysBack: number = 30) => {
       return data;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes (history updates less frequently)
+    refetchInterval: false, // Don't poll historical data
   });
 };
