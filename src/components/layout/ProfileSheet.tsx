@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, LogOut } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -41,11 +41,6 @@ export const ProfileSheet = () => {
     }
   };
 
-  const handleSettings = () => {
-    setOpen(false);
-    navigate('/settings');
-  };
-
   // Mobile: Bottom Sheet
   if (isMobile) {
     return (
@@ -66,15 +61,6 @@ export const ProfileSheet = () => {
                 <p className="text-sm font-medium text-foreground mt-1">{user.email}</p>
               </div>
             )}
-            
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={handleSettings}
-            >
-              <Settings className="mr-3 h-5 w-5" />
-              Settings
-            </Button>
             
             <Button
               variant="ghost"
@@ -108,13 +94,6 @@ export const ProfileSheet = () => {
             <DropdownMenuSeparator />
           </>
         )}
-        
-        <DropdownMenuItem onClick={handleSettings} className="cursor-pointer">
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </DropdownMenuItem>
-        
-        <DropdownMenuSeparator />
         
         <DropdownMenuItem 
           onClick={handleSignOut}

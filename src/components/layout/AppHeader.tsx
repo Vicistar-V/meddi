@@ -19,7 +19,7 @@ export const AppHeader = ({ onAddClick }: AppHeaderProps) => {
     
     if (path === '/dashboard' || path === '/') {
       return {
-        title: 'Dashboard',
+        title: "Today's Meds",
         showProfile: true,
         showAdd: false,
       };
@@ -41,13 +41,6 @@ export const AppHeader = ({ onAddClick }: AppHeaderProps) => {
       };
     }
     
-    if (path === '/settings') {
-      return {
-        title: 'Settings',
-        showProfile: false,
-        showAdd: false,
-      };
-    }
     
     if (path === '/verify') {
       return {
