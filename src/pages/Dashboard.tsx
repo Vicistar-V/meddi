@@ -1,121 +1,213 @@
 import { useState, useEffect } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
-import { Button } from '@/components/ui/button';
-import { AddMedicationFlow } from '@/components/AddMedicationFlow';
-import { NextDoseCard } from '@/components/NextDoseCard';
-import { DayTimeline } from '@/components/DayTimeline';
-import { BottomNav } from '@/components/BottomNav';
-import { HeroHeader } from '@/components/HeroHeader';
-import { Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Camera, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Navbar } from '@/components/layout/Navbar';
+import { BottomNav } from '@/components/BottomNav';
+import { AddMedicationFlow } from '@/components/AddMedicationFlow';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { QuickStatsHeader } from '@/components/dashboard/QuickStatsHeader';
+import { CurrentDoseFocus } from '@/components/dashboard/CurrentDoseFocus';
+import { CompactTimeline } from '@/components/dashboard/CompactTimeline';
+import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard';
+import { DailyStatsCard } from '@/components/dashboard/DailyStatsCard';
 import { useMedications } from '@/hooks/useMedications';
 import { useAuth } from '@/context/AuthProvider';
 import { getNextDose, getDosesByTimeOfDay, getDoseStatus } from '@/lib/medicationHelpers';
+import { 
+  calculateDailyProgress, 
+  getDailyStats, 
+  calculateWeeklyAdherence, 
+  calculateStreak,
+  getOnTimePercentage 
+} from '@/lib/dashboardStats';
+import { useToast } from '@/hooks/use-toast';
+import { DoseGroup } from '@/lib/medicationHelpers';
 
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { medications, schedules, todayLogs } = useMedications();
-  const [showAddMedication, setShowAddMedication] = useState(false);
+const Dashboard = () => {
+  const [showAddFlow, setShowAddFlow] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Update time every minute for real-time missed status
+  const { medications, schedules, todayLogs, logMedication } = useMedications();
+  const { user } = useAuth();
+
+  // Update time every minute
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000); // Update every minute
-
-    return () => clearInterval(interval);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
+  // Calculate data
   const nextDose = getNextDose(medications, schedules, todayLogs, currentTime);
   const dosesTimeline = getDosesByTimeOfDay(medications, schedules, todayLogs, currentTime);
+  
+  // Calculate next dose status
+  const calculateNextDoseStatus = (): 'overdue' | 'current' | 'upcoming' | 'complete' => {
+    if (!nextDose) return 'complete';
+    
+    const status = getDoseStatus(
+      nextDose.time,
+      nextDose.schedules.map(s => s.schedule.id),
+      todayLogs,
+      currentTime
+    );
+    
+    // Map DoseStatus to CurrentDoseFocus status
+    if (status === 'completed') return 'complete';
+    if (status === 'missed') return 'overdue';
+    return status; // 'current' or 'upcoming'
+  };
+  
+  const nextDoseStatus = calculateNextDoseStatus();
+  
+  const dailyProgress = calculateDailyProgress(schedules, todayLogs);
+  const dailyStats = getDailyStats(schedules, todayLogs);
+  const weeklyAdherence = calculateWeeklyAdherence(schedules, todayLogs);
+  const streak = calculateStreak(todayLogs);
+  
+  const allDoses = Array.from(dosesTimeline.values()).flat();
+  const onTimePercentage = getOnTimePercentage(allDoses, todayLogs, currentTime);
 
-  // Calculate status for next dose
-  const nextDoseStatus = nextDose 
-    ? getDoseStatus(
-        nextDose.time, 
-        nextDose.schedules.map(s => s.schedule.id),
-        todayLogs,
-        currentTime
-      )
-    : null;
+  // Get user name
+  const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
 
-  const hasMedications = medications.length > 0;
+  // Handle marking dose as taken
+  const handleMarkTaken = async (dose: DoseGroup) => {
+    try {
+      await Promise.all(
+        dose.schedules.map(item =>
+          logMedication.mutateAsync({
+            schedule_id: item.schedule.id,
+            status: 'taken',
+          })
+        )
+      );
+      toast({
+        title: 'Dose logged',
+        description: 'Successfully logged medication intake'
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to log dose. Please try again.'
+      });
+    }
+  };
+
+  const handleSkip = (dose: DoseGroup) => {
+    toast({
+      title: 'Dose skipped',
+      description: 'You can log it later if needed'
+    });
+  };
+
+  // Empty state
+  if (medications.length === 0) {
+    return (
+      <>
+        <Navbar onAddClick={() => setShowAddFlow(true)} />
+        <main className="container mx-auto px-4 py-6 pb-32">
+          <Card className="border-2 bg-gradient-cream p-12 text-center">
+            <div className="mx-auto max-w-sm space-y-6">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                <Plus className="h-10 w-10 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">
+                  No medications configured
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Add your first medication to start tracking your doses
+                </p>
+                <Button
+                  onClick={() => setShowAddFlow(true)}
+                  size="lg"
+                  className="w-full max-w-xs"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Add Your First Medication
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </main>
+        <BottomNav />
+        <AddMedicationFlow 
+          open={showAddFlow} 
+          onOpenChange={setShowAddFlow} 
+        />
+      </>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <Navbar onAddClick={() => setShowAddMedication(true)} />
+    <>
+      <Navbar onAddClick={() => setShowAddFlow(true)} />
       
-      {/* Zone 1: The Action Center (Hero Section) */}
-      <div className="container mx-auto px-4 pt-8 pb-6">
-        {/* Modern Hero Header */}
-        <HeroHeader
-          user={user}
-          medications={medications}
-          schedules={schedules}
-          todayLogs={todayLogs}
-          currentTime={currentTime}
-        />
-        
-        {hasMedications && nextDose && (
-          <div className="mt-6">
-            <NextDoseCard 
-              nextDose={nextDose}
-              status={nextDoseStatus}
-              onDoseComplete={() => {
-                // Refresh will happen automatically via query invalidation
-              }}
+      <main>
+        <DashboardLayout
+          header={
+            <QuickStatsHeader
+              userName={userName}
+              todayProgress={dailyProgress}
+              weekStreak={streak}
+              weeklyAdherence={weeklyAdherence}
             />
-          </div>
-        )}
-        
-        {!hasMedications && (
-          <div className="rounded-lg border border-dashed p-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Camera className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="mb-2 text-xl font-semibold">Welcome to Pill-Pal AI!</h3>
-            <p className="mb-6 text-muted-foreground">
-              Get started by adding your first medication
-            </p>
-            <Button size="lg" onClick={() => setShowAddMedication(true)}>
-              Add Your First Medication
-            </Button>
-          </div>
-        )}
-      </div>
-      
-      {/* Zone 2: The Day's Plan (Timeline) */}
-      {hasMedications && (
-        <div className="container mx-auto px-4 pb-8">
-          <h2 className="mb-4 text-lg font-semibold">Today's Plan</h2>
-          <DayTimeline 
-            dosesTimeline={dosesTimeline}
-            todayLogs={todayLogs}
-            currentTime={currentTime}
-          />
-        </div>
-      )}
-      
-      {/* Zone 3: Floating Action Button */}
-      <Button 
-        className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
-        size="icon"
+          }
+          mainContent={
+            <>
+              <CurrentDoseFocus
+                nextDose={nextDose}
+                status={nextDoseStatus}
+                currentTime={currentTime}
+                onMarkTaken={handleMarkTaken}
+                onSkip={handleSkip}
+              />
+
+              <CompactTimeline
+                dosesTimeline={dosesTimeline}
+                todayLogs={todayLogs}
+                currentTime={currentTime}
+                onMarkTaken={handleMarkTaken}
+              />
+            </>
+          }
+          sidebar={
+            <>
+              <QuickActionsCard onAddMedication={() => setShowAddFlow(true)} />
+              <DailyStatsCard
+                adherence={dailyProgress}
+                completedCount={dailyStats.completed}
+                totalCount={dailyStats.total}
+                onTimePercentage={onTimePercentage}
+                streak={streak}
+              />
+            </>
+          }
+        />
+      </main>
+
+      {/* Mobile FAB for camera - visible only on mobile */}
+      <button
         onClick={() => navigate('/verify')}
-        aria-label="Identify Pill"
+        className="fixed bottom-32 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110 active:scale-95 lg:hidden"
+        aria-label="Scan prescription"
       >
         <Camera className="h-6 w-6" />
-      </Button>
-      
-      {/* Bottom Navigation */}
+      </button>
+
       <BottomNav />
       
-      {/* Modals */}
       <AddMedicationFlow 
-        open={showAddMedication} 
-        onOpenChange={setShowAddMedication} 
+        open={showAddFlow} 
+        onOpenChange={setShowAddFlow} 
       />
-    </div>
+    </>
   );
-}
+};
+
+export default Dashboard;
