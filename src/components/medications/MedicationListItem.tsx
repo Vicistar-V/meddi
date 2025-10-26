@@ -9,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Medication, Schedule, MedicationLog } from '@/hooks/useMedications';
-import { ChevronDown, ChevronUp, MoreVertical, Pencil, Trash2, Clock, Calendar, TrendingUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, MoreVertical, Pencil, Trash2, Clock, Calendar, TrendingUp, Plus, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { InteractionWarningBanner } from './InteractionWarningBanner';
 
 interface MedicationListItemProps {
   medication: Medication;
@@ -19,7 +20,11 @@ interface MedicationListItemProps {
   adherenceRate: number;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onEditSchedule?: (scheduleId: string) => void;
+  onAddSchedule?: (medicationId: string) => void;
+  onEditSchedule?: (schedule: Schedule) => void;
+  onDeleteSchedule?: (scheduleId: string) => void;
+  interactions?: any[];
+  onViewInteractionDetails?: () => void;
 }
 
 export const MedicationListItem = ({
@@ -29,7 +34,11 @@ export const MedicationListItem = ({
   adherenceRate,
   onEdit,
   onDelete,
+  onAddSchedule,
   onEditSchedule,
+  onDeleteSchedule,
+  interactions = [],
+  onViewInteractionDetails,
 }: MedicationListItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -55,6 +64,20 @@ export const MedicationListItem = ({
   return (
     <Card className="bg-gradient-cream shadow-warm border-border/50 transition-all duration-200 hover:shadow-lg">
       <div className="p-4">
+        {/* Interaction Warning Banner */}
+        {interactions.length > 0 && onViewInteractionDetails && (
+          <InteractionWarningBanner
+            medicationId={medication.id}
+            medicationName={medication.name}
+            interactions={interactions}
+            onViewDetails={onViewInteractionDetails}
+            onDismiss={() => {
+              // Store dismissal in localStorage
+              localStorage.setItem(`dismissed-interaction-${medication.id}`, 'true');
+            }}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -62,6 +85,9 @@ export const MedicationListItem = ({
               <h3 className="text-base font-semibold text-foreground truncate">
                 {medication.name}
               </h3>
+              {interactions.length > 0 && (
+                <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+              )}
               <span className="text-sm text-muted-foreground">{medication.dosage}</span>
             </div>
             {medication.instructions && (
@@ -133,6 +159,17 @@ export const MedicationListItem = ({
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Schedules
               </h4>
+              {onAddSchedule && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAddSchedule(medication.id)}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Schedule
+                </Button>
+              )}
             </div>
 
             {schedules.length === 0 ? (
@@ -166,16 +203,28 @@ export const MedicationListItem = ({
                             </p>
                           )}
                         </div>
-                        {onEditSchedule && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onEditSchedule(schedule.id)}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Edit
-                          </Button>
-                        )}
+                        <div className="flex gap-1">
+                          {onEditSchedule && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEditSchedule(schedule)}
+                              className="h-7 px-2 text-xs"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {onDeleteSchedule && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onDeleteSchedule(schedule.id)}
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

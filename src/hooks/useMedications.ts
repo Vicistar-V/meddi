@@ -149,6 +149,37 @@ export const useMedications = () => {
     }
   });
 
+  const updateSchedule = useMutation({
+    mutationFn: async ({ scheduleId, updates }: { scheduleId: string; updates: Partial<Schedule> }) => {
+      const { data, error } = await supabase
+        .from('schedules')
+        .update(updates)
+        .eq('id', scheduleId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    }
+  });
+
+  const deleteSchedule = useMutation({
+    mutationFn: async (scheduleId: string) => {
+      const { error } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('id', scheduleId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    }
+  });
+
   return {
     medications,
     schedules,
@@ -156,6 +187,8 @@ export const useMedications = () => {
     isLoading,
     addMedication,
     addSchedule,
+    updateSchedule,
+    deleteSchedule,
     logMedication,
     deleteMedication
   };

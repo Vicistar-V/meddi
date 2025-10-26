@@ -71,58 +71,127 @@ serve(async (req) => {
 
     console.log(`Checking interactions for ${sanitizedName} with ${medications?.length || 0} existing medications`);
 
-    const interactions: any[] = [];
+    // Mock drug interaction database with structured severity levels
+    const knownInteractions: Record<string, Array<{ 
+      drug: string; 
+      severity: 'severe' | 'moderate' | 'minor'; 
+      warning: string; 
+      recommendation: string 
+    }>> = {
+      'aspirin': [
+        { 
+          drug: 'warfarin', 
+          severity: 'severe', 
+          warning: 'Increases risk of bleeding significantly. Combined use can lead to serious bleeding complications.', 
+          recommendation: 'Consult your doctor before combining. May require dosage adjustment or alternative medication.' 
+        },
+        { 
+          drug: 'ibuprofen', 
+          severity: 'moderate', 
+          warning: 'Reduces cardioprotective effect of aspirin when taken together.', 
+          recommendation: 'Take ibuprofen at least 8 hours before or 30 minutes after aspirin if both are necessary.' 
+        },
+        { 
+          drug: 'lisinopril', 
+          severity: 'moderate', 
+          warning: 'May reduce the blood pressure lowering effect of Lisinopril.', 
+          recommendation: 'Monitor blood pressure regularly and report any changes to your doctor.' 
+        },
+      ],
+      'warfarin': [
+        { 
+          drug: 'aspirin', 
+          severity: 'severe', 
+          warning: 'Significantly increases bleeding risk when taken together.', 
+          recommendation: 'Avoid combination unless specifically prescribed by doctor. Requires close monitoring.' 
+        },
+        { 
+          drug: 'vitamin k', 
+          severity: 'moderate', 
+          warning: 'Can reduce effectiveness of warfarin anticoagulation therapy.', 
+          recommendation: 'Maintain consistent vitamin K intake. Consult doctor before changing diet.' 
+        },
+      ],
+      'lisinopril': [
+        { 
+          drug: 'aspirin', 
+          severity: 'moderate', 
+          warning: 'May reduce blood pressure lowering effects of Lisinopril.', 
+          recommendation: 'Monitor blood pressure regularly and report elevated readings.' 
+        },
+        { 
+          drug: 'potassium', 
+          severity: 'moderate', 
+          warning: 'May cause dangerously high potassium levels (hyperkalemia).', 
+          recommendation: 'Avoid potassium supplements without doctor approval. Regular blood tests recommended.' 
+        },
+      ],
+      'metformin': [
+        { 
+          drug: 'alcohol', 
+          severity: 'moderate', 
+          warning: 'Increases risk of lactic acidosis, a serious condition.', 
+          recommendation: 'Limit alcohol consumption. Avoid heavy drinking while taking metformin.' 
+        },
+      ],
+      'simvastatin': [
+        { 
+          drug: 'grapefruit', 
+          severity: 'moderate', 
+          warning: 'Grapefruit can increase statin levels in blood, raising risk of side effects including muscle damage.', 
+          recommendation: 'Avoid grapefruit and grapefruit juice completely while taking this medication.' 
+        },
+      ],
+      'ibuprofen': [
+        { 
+          drug: 'aspirin', 
+          severity: 'moderate', 
+          warning: 'Reduces the cardioprotective benefits of low-dose aspirin.', 
+          recommendation: 'Timing is important - take ibuprofen at least 8 hours before aspirin or 30 minutes after.' 
+        },
+      ],
+    };
 
-    // Check interactions with OpenFDA API
+    const interactions: any[] = [];
+    const searchMedName = sanitizedName.toLowerCase();
+
+    // Check for known interactions
     if (medications && medications.length > 0) {
-      for (const med of medications) {
-        try {
-          const encodedNewMed = encodeURIComponent(sanitizedName);
-          const encodedExistingMed = encodeURIComponent(med.name);
-          
-          // Query OpenFDA for the new medication
-          const fdaUrl = `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodedNewMed}"+OR+openfda.generic_name:"${encodedNewMed}"&limit=1`;
-          
-          const fdaResponse = await fetch(fdaUrl);
-          
-          if (fdaResponse.ok) {
-            const fdaData = await fdaResponse.json();
-            
-            if (fdaData.results && fdaData.results.length > 0) {
-              const drugLabel = fdaData.results[0];
-              
-              // Check drug interactions field
-              const drugInteractions = drugLabel.drug_interactions?.[0] || '';
-              
-              // Simple keyword matching for existing medications
-              if (drugInteractions.toLowerCase().includes(med.name.toLowerCase())) {
-                interactions.push({
-                  drug: med.name,
-                  warning: `Potential interaction detected. ${drugInteractions.substring(0, 300)}...`
-                });
-              }
-              
-              // Check warnings and precautions
-              const warnings = drugLabel.warnings?.[0] || '';
-              if (warnings.toLowerCase().includes(med.name.toLowerCase())) {
-                interactions.push({
-                  drug: med.name,
-                  warning: `Warning found in drug label. Please consult your healthcare provider.`
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`Error checking interaction with ${med.name}:`, error);
-          // Continue checking other medications
+      // Check if new medication interacts with existing ones
+      if (knownInteractions[searchMedName]) {
+        for (const userMed of medications) {
+          const userMedName = userMed.name.toLowerCase();
+          const matchingInteractions = knownInteractions[searchMedName].filter(
+            interaction => interaction.drug.toLowerCase() === userMedName
+          );
+          interactions.push(...matchingInteractions);
+        }
+      }
+
+      // Also check reverse interactions (user's existing meds that interact with new med)
+      for (const userMed of medications) {
+        const userMedName = userMed.name.toLowerCase();
+        if (knownInteractions[userMedName]) {
+          const matchingInteractions = knownInteractions[userMedName].filter(
+            interaction => interaction.drug.toLowerCase() === searchMedName
+          );
+          // Add interactions with swapped drug name
+          interactions.push(...matchingInteractions.map(i => ({
+            ...i,
+            drug: userMed.name, // Show the existing medication name
+          })));
         }
       }
     }
 
+    console.log(`Found ${interactions.length} interactions`);
+
     return new Response(
       JSON.stringify({ 
-        interactions,
-        checked_against: medications?.map(m => m.name) || []
+        has_interactions: interactions.length > 0,
+        checked_medication: sanitizedName,
+        checked_against: medications?.map(m => m.name) || [],
+        interactions: interactions,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

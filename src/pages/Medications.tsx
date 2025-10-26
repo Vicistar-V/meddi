@@ -8,6 +8,11 @@ import { MedicationListItem } from '@/components/medications/MedicationListItem'
 import { MedicationFiltersCard } from '@/components/medications/MedicationFiltersCard';
 import { WeeklyScheduleOverview } from '@/components/medications/WeeklyScheduleOverview';
 import { EditMedicationDialog } from '@/components/medications/EditMedicationDialog';
+import { AddScheduleDialog } from '@/components/medications/AddScheduleDialog';
+import { EditScheduleDialog } from '@/components/medications/EditScheduleDialog';
+import { DeleteScheduleDialog } from '@/components/medications/DeleteScheduleDialog';
+import { InteractionDetailsDialog } from '@/components/medications/InteractionDetailsDialog';
+import { InteractionScanButton } from '@/components/medications/InteractionScanButton';
 import { useMedications, Medication, Schedule } from '@/hooks/useMedications';
 import { useMedicationAdherence } from '@/hooks/useMedicationAdherence';
 import { useAuth } from '@/context/AuthProvider';
@@ -30,7 +35,16 @@ const Medications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { medications, schedules, todayLogs, isLoading, deleteMedication } = useMedications();
+  const { 
+    medications, 
+    schedules, 
+    todayLogs, 
+    isLoading, 
+    deleteMedication, 
+    addSchedule,
+    updateSchedule,
+    deleteSchedule 
+  } = useMedications();
   const { getMedicationAdherence, getWeeklyScheduleData, overallAdherence } = useMedicationAdherence(
     medications,
     schedules,
@@ -44,6 +58,14 @@ const Medications = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'frequency'>('name');
+  
+  // Schedule management state
+  const [addingScheduleForMed, setAddingScheduleForMed] = useState<string | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(null);
+  
+  // Interaction state
+  const [interactionMedication, setInteractionMedication] = useState<{ name: string; interactions: any[] } | null>(null);
 
   // Filtered and sorted medications
   const filteredMedications = useMemo(() => {
@@ -157,6 +179,76 @@ const Medications = () => {
     setSortBy('name');
   };
 
+  // Schedule management handlers
+  const handleAddSchedule = (medicationId: string) => {
+    setAddingScheduleForMed(medicationId);
+  };
+
+  const handleEditSchedule = (schedule: Schedule) => {
+    setEditingSchedule(schedule);
+  };
+
+  const handleDeleteSchedule = (scheduleId: string) => {
+    setDeletingScheduleId(scheduleId);
+  };
+
+  const confirmScheduleSave = async (medicationId: string, scheduleData: Omit<Schedule, 'id' | 'user_id'>) => {
+    try {
+      await addSchedule.mutateAsync(scheduleData);
+      toast({
+        title: 'Schedule added',
+        description: 'The new schedule has been created successfully.',
+      });
+      setAddingScheduleForMed(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to add schedule',
+        description: 'Please try again.',
+      });
+    }
+  };
+
+  const confirmScheduleUpdate = async (scheduleId: string, updates: Partial<Schedule>) => {
+    try {
+      await updateSchedule.mutateAsync({ scheduleId, updates });
+      toast({
+        title: 'Schedule updated',
+        description: 'Your changes have been saved successfully.',
+      });
+      setEditingSchedule(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update schedule',
+        description: 'Please try again.',
+      });
+    }
+  };
+
+  const confirmScheduleDelete = async () => {
+    if (!deletingScheduleId) return;
+    
+    try {
+      await deleteSchedule.mutateAsync(deletingScheduleId);
+      toast({
+        title: 'Schedule deleted',
+        description: 'The schedule has been removed.',
+      });
+      setDeletingScheduleId(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete schedule',
+        description: 'Please try again.',
+      });
+    }
+  };
+
+  const handleViewInteractionDetails = (medicationName: string, interactions: any[]) => {
+    setInteractionMedication({ name: medicationName, interactions });
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -208,12 +300,17 @@ const Medications = () => {
       
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <MedicationsHeader
-          medicationCount={medications.length}
-          scheduleCount={schedules.length}
-          adherenceRate={overallAdherence}
-          onAddClick={() => setShowAddFlow(true)}
-        />
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex-1">
+            <MedicationsHeader
+              medicationCount={medications.length}
+              scheduleCount={schedules.length}
+              adherenceRate={overallAdherence}
+              onAddClick={() => setShowAddFlow(true)}
+            />
+          </div>
+          <InteractionScanButton medications={medications} />
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mt-6">
@@ -251,6 +348,11 @@ const Medications = () => {
                       adherenceRate={adherenceRate}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onAddSchedule={handleAddSchedule}
+                      onEditSchedule={handleEditSchedule}
+                      onDeleteSchedule={handleDeleteSchedule}
+                      interactions={[]}
+                      onViewInteractionDetails={() => handleViewInteractionDetails(medication.name, [])}
                     />
                   );
                 })
@@ -285,6 +387,46 @@ const Medications = () => {
           medication={editingMedication}
           schedules={getMedicationSchedules(editingMedication.id)}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Schedule Dialogs */}
+      <AddScheduleDialog
+        open={!!addingScheduleForMed}
+        onOpenChange={(open) => !open && setAddingScheduleForMed(null)}
+        medicationId={addingScheduleForMed || ''}
+        medicationName={medications.find(m => m.id === addingScheduleForMed)?.name || ''}
+        existingSchedules={getMedicationSchedules(addingScheduleForMed || '')}
+        onSave={confirmScheduleSave}
+      />
+
+      <EditScheduleDialog
+        open={!!editingSchedule}
+        onOpenChange={(open) => !open && setEditingSchedule(null)}
+        schedule={editingSchedule}
+        medicationName={medications.find(m => m.id === editingSchedule?.medication_id)?.name || ''}
+        onSave={confirmScheduleUpdate}
+      />
+
+      <DeleteScheduleDialog
+        open={!!deletingScheduleId}
+        onOpenChange={(open) => !open && setDeletingScheduleId(null)}
+        schedule={schedules.find(s => s.id === deletingScheduleId) || null}
+        isOnlySchedule={
+          editingSchedule 
+            ? getMedicationSchedules(editingSchedule.medication_id).length === 1 
+            : false
+        }
+        onConfirm={confirmScheduleDelete}
+      />
+
+      {/* Interaction Details Dialog */}
+      {interactionMedication && (
+        <InteractionDetailsDialog
+          open={!!interactionMedication}
+          onOpenChange={(open) => !open && setInteractionMedication(null)}
+          medicationName={interactionMedication.name}
+          interactions={interactionMedication.interactions}
         />
       )}
 
