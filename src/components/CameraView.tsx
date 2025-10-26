@@ -376,7 +376,7 @@ export const CameraView = () => {
   return (
     <div className="space-y-6">
       {/* Premium Camera View */}
-      <div className="relative overflow-hidden rounded-3xl shadow-2xl backdrop-blur-sm border border-border/50">
+      <div className="relative overflow-hidden rounded-3xl shadow-2xl border border-border/50">
         <div className="relative aspect-[4/3] md:aspect-video bg-gradient-to-br from-muted/50 to-muted">
           {!isStreaming && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
@@ -400,19 +400,19 @@ export const CameraView = () => {
           <canvas ref={canvasRef} className="hidden" />
           
           {isAnalyzing && isStreaming && (
-            <div className="absolute top-6 right-6 bg-background/95 backdrop-blur-md border border-border/50 px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-4">
+            <div className="absolute top-6 right-6 bg-background/95 border border-border/50 px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-4">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span className="text-foreground font-medium">{loadingStage || 'Analyzing'}</span>
             </div>
           )}
           
           {result && isStreaming && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent backdrop-blur-sm p-6 animate-in slide-in-from-bottom-6">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-6 animate-in slide-in-from-bottom-6">
               {result.identification.identified ? (
                 <div className="space-y-3 text-white">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-bold text-xl">{result.identification.name}</p>
-                    <span className="text-xs bg-white/20 backdrop-blur px-2.5 py-1 rounded-full whitespace-nowrap">
+                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full whitespace-nowrap">
                       {(result.identification.confidence * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -466,7 +466,7 @@ export const CameraView = () => {
       {result && !isStreaming && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Basic Identification Card */}
-          <Card className="p-6 shadow-lg border-border/50 backdrop-blur">
+          <Card className="p-6 shadow-lg border-border/50">
             <div className="flex items-start justify-between mb-4 gap-4">
               <h3 className="font-bold text-xl">
                 {result.identification.identified 
@@ -500,7 +500,7 @@ export const CameraView = () => {
           {result.identification.identified && (
             <>
               {result.databaseMatch.exists ? (
-                <Card className="p-6 border-green-200/50 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10 shadow-lg backdrop-blur">
+                <Card className="p-6 border-green-200/50 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10 shadow-lg">
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
@@ -569,7 +569,7 @@ export const CameraView = () => {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-6 border-yellow-200/50 bg-gradient-to-br from-yellow-50/50 to-yellow-100/30 dark:bg-yellow-950/20 dark:border-yellow-700 shadow-lg backdrop-blur">
+                <Card className="p-6 border-yellow-200/50 bg-gradient-to-br from-yellow-50/50 to-yellow-100/30 dark:bg-yellow-950/20 dark:border-yellow-700 shadow-lg">
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -586,7 +586,7 @@ export const CameraView = () => {
 
               {/* Drug Interactions Warning */}
               {result.interactions && result.interactions.has_interactions && (
-                <Card className="p-6 border-red-200/50 bg-gradient-to-br from-red-50/50 to-red-100/30 dark:bg-red-950/20 dark:border-red-800 shadow-lg backdrop-blur">
+                <Card className="p-6 border-red-200/50 bg-gradient-to-br from-red-50/50 to-red-100/30 dark:bg-red-950/20 dark:border-red-800 shadow-lg">
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">

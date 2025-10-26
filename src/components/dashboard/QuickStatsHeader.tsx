@@ -28,7 +28,7 @@ export const QuickStatsHeader = ({
   else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
 
   return (
-    <Card className="border-2 bg-gradient-warm-cream backdrop-blur-sm overflow-hidden">
+    <Card className="border-2 bg-gradient-warm-cream overflow-hidden">
       <div className="p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Left: Greeting */}

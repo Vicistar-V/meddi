@@ -78,7 +78,7 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50/50 to-orange-50/50 p-4">
-      <Card className="w-full max-w-md bg-gradient-cappuccino shadow-2xl backdrop-blur-sm">
+      <Card className="w-full max-w-md bg-gradient-cappuccino shadow-2xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
             <Pill className="h-8 w-8 text-primary-foreground" />

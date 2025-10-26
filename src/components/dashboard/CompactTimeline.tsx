@@ -81,7 +81,7 @@ export const CompactTimeline = ({
   };
 
   return (
-    <Card className="border-2 bg-gradient-cream backdrop-blur-sm">
+    <Card className="border-2 bg-gradient-cream">
       <div className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

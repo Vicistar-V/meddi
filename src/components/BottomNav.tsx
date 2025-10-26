@@ -28,7 +28,7 @@ export const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 supports-[backdrop-filter]:bg-background/80">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-around">
           {tabs.map((tab) => {

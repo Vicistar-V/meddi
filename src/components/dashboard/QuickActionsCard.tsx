@@ -11,7 +11,7 @@ export const QuickActionsCard = ({ onAddMedication }: QuickActionsCardProps) => 
   const navigate = useNavigate();
 
   return (
-    <Card className="border-2 bg-gradient-vanilla backdrop-blur-sm sticky top-6 shadow-butter">
+    <Card className="border-2 bg-gradient-vanilla sticky top-6 shadow-butter">
       <div className="p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
           Quick Actions

@@ -18,7 +18,7 @@ export const DailyStatsCard = ({
   streak
 }: DailyStatsCardProps) => {
   return (
-    <Card className="border-2 bg-gradient-warm-cream backdrop-blur-sm">
+    <Card className="border-2 bg-gradient-warm-cream">
       <div className="p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
           Today's Stats

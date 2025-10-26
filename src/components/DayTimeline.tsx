@@ -33,7 +33,7 @@ export const DayTimeline = ({
 
   if (allDoses.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-dashed bg-gradient-latte backdrop-blur-sm p-12 text-center">
+      <div className="rounded-xl border-2 border-dashed bg-gradient-latte p-12 text-center">
         <div className="mx-auto max-w-sm space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Calendar className="h-8 w-8 text-primary" />
@@ -123,7 +123,7 @@ export const DayTimeline = ({
         />
 
         {/* All Done Message */}
-        <div className="rounded-xl border-2 bg-gradient-vanilla backdrop-blur-sm border-success/30 p-8 text-center shadow-butter">
+        <div className="rounded-xl border-2 bg-gradient-vanilla border-success/30 p-8 text-center shadow-butter">
           <div className="mx-auto max-w-sm space-y-4">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 animate-in zoom-in duration-500">
               <Sparkles className="h-8 w-8 text-success" />
