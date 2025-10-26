@@ -73,13 +73,6 @@ export const MedicationSearchBar = ({
 
       {/* Filter and Sort Controls */}
       <div className="flex gap-2">
-        {/* Drug Safety Check Button */}
-        {medications.length > 0 && (
-          <div className="lg:hidden">
-            <InteractionScanButton medications={medications} />
-          </div>
-        )}
-
         {/* Filter Toggle */}
         {onFilterChange && (
           <div className="flex gap-1 bg-muted p-1 rounded-lg">
@@ -99,6 +92,13 @@ export const MedicationSearchBar = ({
             >
               Active
             </Button>
+          </div>
+        )}
+
+        {/* Drug Safety Check Button */}
+        {medications.length > 0 && (
+          <div className="lg:hidden">
+            <InteractionScanButton medications={medications} />
           </div>
         )}
 
