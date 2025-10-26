@@ -1,0 +1,321 @@
+import { useState, useMemo } from 'react';
+import { Navbar } from '@/components/layout/Navbar';
+import { BottomNav } from '@/components/BottomNav';
+import { AddMedicationFlow } from '@/components/AddMedicationFlow';
+import { MedicationsHeader } from '@/components/medications/MedicationsHeader';
+import { MedicationSearchBar } from '@/components/medications/MedicationSearchBar';
+import { MedicationListItem } from '@/components/medications/MedicationListItem';
+import { MedicationFiltersCard } from '@/components/medications/MedicationFiltersCard';
+import { WeeklyScheduleOverview } from '@/components/medications/WeeklyScheduleOverview';
+import { EditMedicationDialog } from '@/components/medications/EditMedicationDialog';
+import { useMedications, Medication, Schedule } from '@/hooks/useMedications';
+import { useMedicationAdherence } from '@/hooks/useMedicationAdherence';
+import { useAuth } from '@/context/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Pill } from 'lucide-react';
+
+const Medications = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { medications, schedules, todayLogs, isLoading, deleteMedication } = useMedications();
+  const { getMedicationAdherence, getWeeklyScheduleData, overallAdherence } = useMedicationAdherence(
+    medications,
+    schedules,
+    todayLogs
+  );
+
+  // State
+  const [showAddFlow, setShowAddFlow] = useState(false);
+  const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'recent' | 'frequency'>('name');
+
+  // Filtered and sorted medications
+  const filteredMedications = useMemo(() => {
+    let filtered = medications.filter(med =>
+      med.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      med.dosage.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Apply status filter (active means has schedules)
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(med =>
+        schedules.some(s => s.medication_id === med.id)
+      );
+    }
+
+    // Sort medications
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === 'recent') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortBy === 'frequency') {
+        const aSchedules = schedules.filter(s => s.medication_id === a.id).length;
+        const bSchedules = schedules.filter(s => s.medication_id === b.id).length;
+        return bSchedules - aSchedules;
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [medications, schedules, searchTerm, statusFilter, sortBy]);
+
+  // Get schedules for a medication
+  const getMedicationSchedules = (medicationId: string) => {
+    return schedules.filter(s => s.medication_id === medicationId);
+  };
+
+  // Get logs for a medication
+  const getMedicationLogs = (medicationId: string) => {
+    const medSchedules = schedules.filter(s => s.medication_id === medicationId);
+    const scheduleIds = medSchedules.map(s => s.id);
+    return todayLogs.filter(log => scheduleIds.includes(log.schedule_id));
+  };
+
+  // Handlers
+  const handleEdit = (medicationId: string) => {
+    const med = medications.find(m => m.id === medicationId);
+    if (med) {
+      setEditingMedication(med);
+    }
+  };
+
+  const handleDelete = (medicationId: string) => {
+    setDeletingId(medicationId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+
+    try {
+      await deleteMedication.mutateAsync(deletingId);
+      toast({
+        title: 'Medication deleted',
+        description: 'The medication and all its schedules have been removed.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete medication',
+        description: 'Please try again.',
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleSaveEdit = async (
+    medicationId: string,
+    updates: Partial<Medication>,
+    updatedSchedules: Schedule[]
+  ) => {
+    try {
+      // Update medication
+      const { error: medError } = await supabase
+        .from('medications')
+        .update(updates)
+        .eq('id', medicationId);
+
+      if (medError) throw medError;
+
+      toast({
+        title: 'Medication updated',
+        description: 'Your changes have been saved successfully.',
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['medications'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update medication',
+        description: 'Please try again.',
+      });
+      throw error;
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setSortBy('name');
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading medications...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Empty state
+  if (medications.length === 0) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <Navbar />
+        <div className="container mx-auto px-4 py-6">
+          <MedicationsHeader
+            medicationCount={0}
+            scheduleCount={0}
+            adherenceRate={0}
+            onAddClick={() => setShowAddFlow(true)}
+          />
+          
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <Pill className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">No medications added yet</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-8">
+              Get started by adding your first medication to track your schedule and improve adherence.
+            </p>
+          </div>
+        </div>
+        <BottomNav />
+        <AddMedicationFlow open={showAddFlow} onOpenChange={setShowAddFlow} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <Navbar />
+      
+      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <MedicationsHeader
+          medicationCount={medications.length}
+          scheduleCount={schedules.length}
+          adherenceRate={overallAdherence}
+          onAddClick={() => setShowAddFlow(true)}
+        />
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mt-6">
+          {/* Left Column: Main Content */}
+          <div className="space-y-4">
+            <MedicationSearchBar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              activeFilter={statusFilter}
+              onFilterChange={setStatusFilter}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+            />
+
+            {/* Medications List */}
+            <div className="space-y-3">
+              {filteredMedications.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    No medications found. Try adjusting your filters.
+                  </p>
+                </div>
+              ) : (
+                filteredMedications.map((medication) => {
+                  const medSchedules = getMedicationSchedules(medication.id);
+                  const medLogs = getMedicationLogs(medication.id);
+                  const adherenceRate = getMedicationAdherence(medication.id, 'week');
+
+                  return (
+                    <MedicationListItem
+                      key={medication.id}
+                      medication={medication}
+                      schedules={medSchedules}
+                      logs={medLogs}
+                      adherenceRate={adherenceRate}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right Sidebar: Filters & Stats */}
+          <aside className="hidden lg:block space-y-6">
+            <MedicationFiltersCard
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              onReset={handleResetFilters}
+            />
+            <WeeklyScheduleOverview
+              weeklyData={getWeeklyScheduleData}
+              overallAdherence={overallAdherence}
+            />
+          </aside>
+        </div>
+      </div>
+
+      <BottomNav />
+
+      {/* Modals and Dialogs */}
+      <AddMedicationFlow open={showAddFlow} onOpenChange={setShowAddFlow} />
+
+      {editingMedication && (
+        <EditMedicationDialog
+          open={!!editingMedication}
+          onOpenChange={(open) => !open && setEditingMedication(null)}
+          medication={editingMedication}
+          schedules={getMedicationSchedules(editingMedication.id)}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Medication?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>{medications.find(m => m.id === deletingId)?.name}</li>
+                <li>{getMedicationSchedules(deletingId || '').length} associated schedule(s)</li>
+                <li>All historical logs</li>
+              </ul>
+              <p className="mt-3 font-medium">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default Medications;

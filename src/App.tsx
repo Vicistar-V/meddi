@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthProvider";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Medications from "./pages/Medications";
 import Verify from "./pages/Verify";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/medications" element={<ProtectedRoute><Medications /></ProtectedRoute>} />
             <Route path="/verify" element={<ProtectedRoute><Verify /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
