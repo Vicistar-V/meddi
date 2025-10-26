@@ -208,6 +208,47 @@ export const CameraView = () => {
         </div>
       </Card>
 
+      {/* Result card for upload mode */}
+      {result && !isStreaming && (
+        <Card className="p-4">
+          {result.identified ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">{result.name}</h3>
+                <span className="text-sm text-muted-foreground">
+                  {(result.confidence * 100).toFixed(0)}% confident
+                </span>
+              </div>
+              {result.description && (
+                <p className="text-sm text-muted-foreground">{result.description}</p>
+              )}
+              {result.warning && (
+                <Alert className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    {result.warning}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="font-medium">Unable to identify pill</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {result.description || "Try a clearer image or different angle"}
+              </p>
+            </div>
+          )}
+          <Button 
+            onClick={() => setResult(null)} 
+            variant="outline" 
+            className="w-full mt-4"
+          >
+            Clear Results
+          </Button>
+        </Card>
+      )}
+
       <div className="flex gap-3">
         {!isStreaming ? (
           <>
