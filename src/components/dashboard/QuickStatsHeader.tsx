@@ -50,42 +50,44 @@ export const QuickStatsHeader = ({
           </div>
         </div>
 
-        {/* Stats Grid - Mobile Optimized */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Today's Progress - Featured Card */}
-          <div className="sm:col-span-1 flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <ProgressRing progress={todayProgress} size={56} strokeWidth={5} />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Today</p>
-              <p className="text-base font-semibold">Progress</p>
+        {/* Stats Row - Horizontal Scroll on Mobile */}
+        <div className="mt-5 -mx-5 px-5 overflow-x-auto">
+          <div className="flex gap-3 min-w-max">
+            {/* Today's Progress */}
+            <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4 min-w-[160px]">
+              <ProgressRing progress={todayProgress} size={56} strokeWidth={5} />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Today</p>
+                <p className="text-base font-semibold">Progress</p>
+              </div>
             </div>
-          </div>
 
-          {/* Streak Card */}
-          <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
-              <span className="text-2xl">🔥</span>
+            {/* Streak Card */}
+            <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4 min-w-[140px]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
+                <span className="text-2xl">🔥</span>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Streak</p>
+                <p className="text-base font-semibold">{weekStreak} {weekStreak === 1 ? 'day' : 'days'}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Streak</p>
-              <p className="text-base font-semibold">{weekStreak} {weekStreak === 1 ? 'day' : 'days'}</p>
-            </div>
-          </div>
 
-          {/* Weekly Adherence Card */}
-          <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <div className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full",
-              weeklyAdherence >= 80 ? "bg-green-500/10" : "bg-orange-500/10"
-            )}>
-              <TrendingUp className={cn(
-                "h-5 w-5",
-                weeklyAdherence >= 80 ? "text-green-600" : "text-orange-600"
-              )} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">This Week</p>
-              <p className="text-base font-semibold">{weeklyAdherence}%</p>
+            {/* Weekly Adherence Card */}
+            <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4 min-w-[140px]">
+              <div className={cn(
+                "flex h-12 w-12 items-center justify-center rounded-full",
+                weeklyAdherence >= 80 ? "bg-green-500/10" : "bg-orange-500/10"
+              )}>
+                <TrendingUp className={cn(
+                  "h-5 w-5",
+                  weeklyAdherence >= 80 ? "text-green-600" : "text-orange-600"
+                )} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">This Week</p>
+                <p className="text-base font-semibold">{weeklyAdherence}%</p>
+              </div>
             </div>
           </div>
         </div>
