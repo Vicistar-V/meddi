@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Pill, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DoseGroup } from '@/lib/medicationHelpers';
@@ -31,6 +32,8 @@ export const CurrentDoseFocus = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
   const [markingIndividual, setMarkingIndividual] = useState<string | null>(null);
+  const [confirmEarly, setConfirmEarly] = useState<{ scheduleId: string; medName: string } | null>(null);
+  const [confirmEarlyAll, setConfirmEarlyAll] = useState(false);
   const { toast } = useToast();
 
   // Check if a schedule is already logged
@@ -40,6 +43,24 @@ export const CurrentDoseFocus = ({
 
   const handleMarkTaken = async () => {
     if (!nextDose || !onMarkTaken) return;
+    
+    // If upcoming, show confirmation
+    if (!isCurrent && !isOverdue) {
+      setConfirmEarlyAll(true);
+      return;
+    }
+    
+    setIsMarking(true);
+    try {
+      await onMarkTaken(nextDose);
+    } finally {
+      setIsMarking(false);
+    }
+  };
+
+  const handleConfirmEarlyAll = async () => {
+    if (!nextDose || !onMarkTaken) return;
+    setConfirmEarlyAll(false);
     setIsMarking(true);
     try {
       await onMarkTaken(nextDose);
@@ -55,9 +76,28 @@ export const CurrentDoseFocus = ({
 
   const handleMarkIndividualMed = async (scheduleId: string, medicationName: string) => {
     if (!onMarkIndividual) return;
+    
+    // If upcoming, show confirmation
+    if (!isCurrent && !isOverdue) {
+      setConfirmEarly({ scheduleId, medName: medicationName });
+      return;
+    }
+    
     setMarkingIndividual(scheduleId);
     try {
       await onMarkIndividual(scheduleId, medicationName);
+    } finally {
+      setMarkingIndividual(null);
+    }
+  };
+
+  const handleConfirmEarlyIndividual = async () => {
+    if (!confirmEarly || !onMarkIndividual) return;
+    const { scheduleId, medName } = confirmEarly;
+    setConfirmEarly(null);
+    setMarkingIndividual(scheduleId);
+    try {
+      await onMarkIndividual(scheduleId, medName);
     } finally {
       setMarkingIndividual(null);
     }
@@ -187,10 +227,10 @@ export const CurrentDoseFocus = ({
                       </p>
                     )}
                   </div>
-                  {(isCurrent || isOverdue) && onMarkIndividual && (
+                  {onMarkIndividual && (
                     <Button
                       size="sm"
-                      variant={isLogged ? "ghost" : "default"}
+                      variant={isLogged ? "ghost" : (!isCurrent && !isOverdue) ? "outline" : "default"}
                       className="h-7 px-2"
                       onClick={() => handleMarkIndividualMed(item.schedule.id, item.medication.name)}
                       disabled={isLogged || isMarkingThis}
@@ -211,51 +251,81 @@ export const CurrentDoseFocus = ({
         )}
 
         {/* Action Buttons */}
-        {(isCurrent || isOverdue) && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          <Button
+            onClick={handleMarkTaken}
+            disabled={isMarking}
+            className="flex-1"
+            size="lg"
+            variant={!isCurrent && !isOverdue ? "outline" : "default"}
+          >
+            {isMarking ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Logging...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                {isOverdue ? 'Log Now' : isCurrent ? 'Take All' : 'Take Early'}
+              </>
+            )}
+          </Button>
+          {isCurrent && (
             <Button
-              onClick={handleMarkTaken}
-              disabled={isMarking}
-              className="flex-1"
+              onClick={handleSkip}
+              variant="outline"
               size="lg"
             >
-              {isMarking ? (
-                <>
-                  <Clock className="mr-2 h-4 w-4 animate-spin" />
-                  Logging...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {isOverdue ? 'Log Now' : 'Take All'}
-                </>
-              )}
+              Skip
             </Button>
-            {isCurrent && (
-              <Button
-                onClick={handleSkip}
-                variant="outline"
-                size="lg"
-              >
-                Skip
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Upcoming State */}
-        {!isCurrent && !isOverdue && (
-          <div className="text-center">
-            <Button
-              variant="outline"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full"
-            >
-              View Details
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Early Confirmation Dialog - All */}
+      <AlertDialog open={confirmEarlyAll} onOpenChange={setConfirmEarlyAll}>
+        <AlertDialogContent className="border-2 border-border bg-gradient-cream">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Take medication early?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              This dose is scheduled for <span className="font-semibold text-foreground">{formatTimeDisplay(nextDose?.time || '')}</span> ({relativeTime}). 
+              Are you sure you want to take it now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEarlyAll}>
+              Yes, Take Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Early Confirmation Dialog - Individual */}
+      <AlertDialog open={!!confirmEarly} onOpenChange={(open) => !open && setConfirmEarly(null)}>
+        <AlertDialogContent className="border-2 border-border bg-gradient-cream">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Take medication early?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              <span className="font-semibold text-foreground">{confirmEarly?.medName}</span> is scheduled for <span className="font-semibold text-foreground">{formatTimeDisplay(nextDose?.time || '')}</span> ({relativeTime}). 
+              Are you sure you want to take it now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEarlyIndividual}>
+              Yes, Take Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

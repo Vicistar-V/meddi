@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Check, Clock, AlertCircle, ChevronDown, ChevronUp, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DoseGroup, getDoseStatus } from '@/lib/medicationHelpers';
@@ -26,6 +27,7 @@ export const CompactTimeline = ({
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [markingIndex, setMarkingIndex] = useState<number | null>(null);
   const [markingIndividual, setMarkingIndividual] = useState<string | null>(null);
+  const [confirmEarly, setConfirmEarly] = useState<{ scheduleId: string; medName: string; time: string } | null>(null);
 
   // Check if a schedule is already logged
   const isScheduleLogged = (scheduleId: string) => {
@@ -49,11 +51,30 @@ export const CompactTimeline = ({
     }
   };
 
-  const handleMarkIndividualMed = async (scheduleId: string, medicationName: string) => {
+  const handleMarkIndividualMed = async (scheduleId: string, medicationName: string, doseTime: string, status: string) => {
     if (!onMarkIndividual) return;
+    
+    // If upcoming, show confirmation
+    if (status === 'upcoming') {
+      setConfirmEarly({ scheduleId, medName: medicationName, time: doseTime });
+      return;
+    }
+    
     setMarkingIndividual(scheduleId);
     try {
       await onMarkIndividual(scheduleId, medicationName);
+    } finally {
+      setMarkingIndividual(null);
+    }
+  };
+
+  const handleConfirmEarly = async () => {
+    if (!confirmEarly || !onMarkIndividual) return;
+    const { scheduleId, medName } = confirmEarly;
+    setConfirmEarly(null);
+    setMarkingIndividual(scheduleId);
+    try {
+      await onMarkIndividual(scheduleId, medName);
     } finally {
       setMarkingIndividual(null);
     }
@@ -214,12 +235,12 @@ export const CompactTimeline = ({
                                 </p>
                               )}
                             </div>
-                            {showAction && onMarkIndividual && (
+                            {onMarkIndividual && (
                               <Button
                                 size="sm"
-                                variant={isLogged ? "ghost" : "default"}
+                                variant={isLogged ? "ghost" : status === 'upcoming' ? "outline" : "default"}
                                 className="h-7 px-2"
-                                onClick={() => handleMarkIndividualMed(item.schedule.id, item.medication.name)}
+                                onClick={() => handleMarkIndividualMed(item.schedule.id, item.medication.name, dose.time, status)}
                                 disabled={isLogged || isMarkingThis}
                               >
                                 {isLogged ? (
@@ -264,6 +285,28 @@ export const CompactTimeline = ({
           })}
         </div>
       </div>
+
+      {/* Early Confirmation Dialog */}
+      <AlertDialog open={!!confirmEarly} onOpenChange={(open) => !open && setConfirmEarly(null)}>
+        <AlertDialogContent className="border-2 border-border bg-gradient-cream">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Take medication early?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              <span className="font-semibold text-foreground">{confirmEarly?.medName}</span> is scheduled for <span className="font-semibold text-foreground">{formatTimeDisplay(confirmEarly?.time || '')}</span>. 
+              Are you sure you want to take it now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEarly}>
+              Yes, Take Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
