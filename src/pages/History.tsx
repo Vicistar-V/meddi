@@ -63,7 +63,7 @@ export default function History() {
   }).filter(item => item.medication);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">

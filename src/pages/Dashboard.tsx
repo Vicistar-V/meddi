@@ -44,7 +44,7 @@ export default function Dashboard() {
   const hasMedications = medications.length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24">
       <Navbar onAddClick={() => setShowAddMedication(true)} />
       
       {/* Zone 1: The Action Center (Hero Section) */}
