@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InteractionScanButton } from './InteractionScanButton';
+import { Medication } from '@/hooks/useMedications';
 
 interface MedicationFiltersCardProps {
   statusFilter?: 'all' | 'active';
@@ -10,6 +12,7 @@ interface MedicationFiltersCardProps {
   frequencyFilters?: string[];
   onFrequencyFiltersChange?: (filters: string[]) => void;
   onReset?: () => void;
+  medications?: Medication[];
 }
 
 export const MedicationFiltersCard = ({
@@ -18,6 +21,7 @@ export const MedicationFiltersCard = ({
   frequencyFilters = [],
   onFrequencyFiltersChange,
   onReset,
+  medications = [],
 }: MedicationFiltersCardProps) => {
   const handleFrequencyToggle = (frequency: string) => {
     if (!onFrequencyFiltersChange) return;
@@ -84,6 +88,13 @@ export const MedicationFiltersCard = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Drug Safety Check */}
+      {medications.length > 0 && (
+        <div className="mb-4">
+          <InteractionScanButton medications={medications} />
         </div>
       )}
 

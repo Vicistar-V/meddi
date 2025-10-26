@@ -299,17 +299,12 @@ const Medications = () => {
       
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex-1">
-            <MedicationsHeader
-              medicationCount={medications.length}
-              scheduleCount={schedules.length}
-              adherenceRate={overallAdherence}
-              onAddClick={() => navigate('/medications/add')}
-            />
-          </div>
-          <InteractionScanButton medications={medications} />
-        </div>
+        <MedicationsHeader
+          medicationCount={medications.length}
+          scheduleCount={schedules.length}
+          adherenceRate={overallAdherence}
+          onAddClick={() => navigate('/medications/add')}
+        />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mt-6">
@@ -365,6 +360,7 @@ const Medications = () => {
               statusFilter={statusFilter}
               onStatusFilterChange={setStatusFilter}
               onReset={handleResetFilters}
+              medications={medications}
             />
             <WeeklyScheduleOverview
               weeklyData={getWeeklyScheduleData}

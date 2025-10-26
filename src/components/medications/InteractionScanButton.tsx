@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Loader2, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Medication } from '@/hooks/useMedications';
@@ -105,6 +105,7 @@ export const InteractionScanButton = ({
         size="sm"
         onClick={scanAllInteractions}
         disabled={isScanning || medications.length < 2}
+        className="w-full"
       >
         {isScanning ? (
           <>
@@ -113,8 +114,8 @@ export const InteractionScanButton = ({
           </>
         ) : (
           <>
-            <Search className="h-4 w-4 mr-2" />
-            Check Interactions
+            <Shield className="h-4 w-4 mr-2" />
+            Check Drug Safety
           </>
         )}
       </Button>
