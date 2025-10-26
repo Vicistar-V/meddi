@@ -24,6 +24,8 @@ import {
 } from '@/lib/dashboardStats';
 import { useToast } from '@/hooks/use-toast';
 import { DoseGroup } from '@/lib/medicationHelpers';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -32,6 +34,21 @@ const Dashboard = () => {
 
   const { medications, schedules, todayLogs, logMedication } = useMedications();
   const { user } = useAuth();
+
+  // Fetch user profile for guest username
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   // Update time every minute
   useEffect(() => {
@@ -70,8 +87,10 @@ const Dashboard = () => {
   const allDoses = Array.from(dosesTimeline.values()).flat();
   const onTimePercentage = getOnTimePercentage(allDoses, todayLogs, currentTime);
 
-  // Get user name
-  const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
+  // Get user name - check profile first (for guests), then user_metadata (for regular users)
+  const userName = profile?.full_name?.split(' ')[0] 
+    || user?.user_metadata?.full_name?.split(' ')[0] 
+    || 'there';
 
   // Handle marking dose as taken
   const handleMarkTaken = async (dose: DoseGroup) => {
