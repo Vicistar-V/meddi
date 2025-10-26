@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Camera, CameraOff, Loader2, AlertCircle, Upload } from "lucide-react";
+import { Camera, CameraOff, Loader2, AlertCircle, Upload, Clock, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useMedications, Medication, Schedule, MedicationLog } from "@/hooks/useMedications";
 
 interface PillIdentification {
   identified: boolean;
@@ -14,35 +15,268 @@ interface PillIdentification {
   warning?: string;
 }
 
+interface MedicationMatch {
+  exists: boolean;
+  medication?: Medication;
+  schedules?: Schedule[];
+  todayLogs?: MedicationLog[];
+  matchType: 'exact' | 'partial' | 'none';
+  dosageMismatch?: {
+    identified: string;
+    inDatabase: string;
+  };
+}
+
+interface DrugInteractionResult {
+  has_interactions: boolean;
+  interactions: Array<{
+    drug: string;
+    severity: 'severe' | 'moderate' | 'minor';
+    warning: string;
+    recommendation: string;
+  }>;
+}
+
+interface EnhancedPillResult {
+  identification: PillIdentification;
+  databaseMatch: MedicationMatch;
+  interactions?: DrugInteractionResult;
+  contextualInfo: ContextualInfo;
+}
+
+interface ContextualInfo {
+  shouldTakeNow: boolean;
+  nextScheduledTime?: string;
+  alreadyTakenToday: boolean;
+  timesLeftToday: number;
+}
+
+// Helper function to extract dosage from text
+const extractDosage = (text: string): string | null => {
+  const match = text.match(/(\d+)\s*(mg|mcg|g|ml|iu|%)/i);
+  return match ? match[0].toLowerCase() : null;
+};
+
+// Fuzzy match medication against user's database
+const fuzzyMatchMedication = (
+  identifiedName: string, 
+  medications: Medication[]
+): MedicationMatch => {
+  const normalized = identifiedName.toLowerCase().trim();
+  
+  // Try exact match first
+  const exactMatch = medications.find(med => 
+    med.name.toLowerCase().trim() === normalized
+  );
+  
+  if (exactMatch) {
+    return { exists: true, medication: exactMatch, matchType: 'exact' };
+  }
+  
+  // Try partial match
+  const partialMatch = medications.find(med => {
+    const medName = med.name.toLowerCase().trim();
+    return medName.includes(normalized) || normalized.includes(medName);
+  });
+  
+  if (partialMatch) {
+    // Check if dosage differs
+    const identifiedDosage = extractDosage(identifiedName);
+    const dbDosage = extractDosage(partialMatch.dosage);
+    
+    if (identifiedDosage && dbDosage && identifiedDosage !== dbDosage) {
+      return {
+        exists: true,
+        medication: partialMatch,
+        matchType: 'partial',
+        dosageMismatch: {
+          identified: identifiedDosage,
+          inDatabase: dbDosage
+        }
+      };
+    }
+    
+    return { exists: true, medication: partialMatch, matchType: 'partial' };
+  }
+  
+  return { exists: false, matchType: 'none' };
+};
+
+// Calculate contextual information about medication schedule
+const calculateContextualInfo = (
+  medication: Medication | undefined,
+  schedules: Schedule[],
+  todayLogs: MedicationLog[]
+): ContextualInfo => {
+  if (!medication) {
+    return {
+      shouldTakeNow: false,
+      alreadyTakenToday: false,
+      timesLeftToday: 0
+    };
+  }
+  
+  const now = new Date();
+  const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+  
+  const medSchedules = schedules.filter(s => s.medication_id === medication.id);
+  const todaySchedules = medSchedules.filter(schedule => 
+    schedule.days_of_week.includes(currentDay)
+  );
+  
+  const takenScheduleIds = todayLogs
+    .filter(log => log.status === 'taken')
+    .map(log => log.schedule_id);
+  
+  const pendingSchedules = todaySchedules.filter(
+    schedule => !takenScheduleIds.includes(schedule.id)
+  );
+  
+  let nextScheduledTime: string | undefined;
+  let shouldTakeNow = false;
+  
+  for (const schedule of pendingSchedules) {
+    const [hours, minutes] = schedule.time_to_take.split(':').map(Number);
+    const scheduleTime = hours * 60 + minutes;
+    
+    if (Math.abs(currentTime - scheduleTime) <= 30) {
+      shouldTakeNow = true;
+      nextScheduledTime = schedule.time_to_take;
+      break;
+    }
+    
+    if (scheduleTime > currentTime) {
+      if (!nextScheduledTime) {
+        nextScheduledTime = schedule.time_to_take;
+      }
+    }
+  }
+  
+  return {
+    shouldTakeNow,
+    nextScheduledTime,
+    alreadyTakenToday: takenScheduleIds.length > 0,
+    timesLeftToday: pendingSchedules.length
+  };
+};
+
+// Format time string
+const formatTime = (time: string): string => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Get severity color classes
+const getSeverityColor = (severity: 'severe' | 'moderate' | 'minor') => {
+  switch (severity) {
+    case 'severe': return 'text-red-600 bg-red-50 border-red-200';
+    case 'moderate': return 'text-orange-600 bg-orange-50 border-orange-200';
+    case 'minor': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+  }
+};
+
 export const CameraView = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<PillIdentification | null>(null);
+  const [result, setResult] = useState<EnhancedPillResult | null>(null);
+  const [loadingStage, setLoadingStage] = useState<string>('');
   const streamRef = useRef<MediaStream | null>(null);
   const analyzeIntervalRef = useRef<number>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { medications, schedules, todayLogs } = useMedications();
+
+  // Check drug interactions
+  const checkDrugInteractions = async (
+    medicationName: string
+  ): Promise<DrugInteractionResult | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'drug-interaction-checker',
+        { body: { medication_name: medicationName } }
+      );
+      
+      if (error) throw error;
+      return data as DrugInteractionResult;
+    } catch (error) {
+      console.error('Error checking interactions:', error);
+      return null;
+    }
+  };
 
   const analyzeImage = async (imageData: string) => {
     setIsAnalyzing(true);
+    setResult(null);
+    setLoadingStage('Identifying pill...');
 
     try {
-      const { data, error } = await supabase.functions.invoke('pill-identifier', {
-        body: { image: imageData }
-      });
+      // Step 1: Identify the pill using AI
+      const { data: identificationData, error: identError } = await supabase.functions.invoke(
+        'pill-identifier',
+        { body: { image: imageData } }
+      );
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
+      if (identError) throw identError;
+      const identification = identificationData as PillIdentification;
+
+      // Low confidence warning
+      if (identification.identified && identification.confidence < 0.7) {
+        toast.warning(
+          `Low confidence (${(identification.confidence * 100).toFixed(0)}%). Please verify with label or pharmacist.`
+        );
       }
 
-      if (data) {
-        setResult(data);
-        if (data.identified && data.confidence > 0.7) {
-          console.log('Pill identified:', data.name, 'Confidence:', data.confidence);
+      setLoadingStage('Checking database...');
+
+      // Step 2: Match against user's database
+      const databaseMatch = identification.identified 
+        ? fuzzyMatchMedication(identification.name, medications)
+        : { exists: false, matchType: 'none' as const };
+
+      setLoadingStage('Checking interactions...');
+
+      // Step 3: Check drug interactions if identified
+      let interactions: DrugInteractionResult | undefined;
+      if (identification.identified && identification.confidence > 0.7) {
+        const interactionResult = await checkDrugInteractions(identification.name);
+        if (interactionResult) {
+          interactions = interactionResult;
         }
       }
+
+      setLoadingStage('');
+
+      // Step 4: Calculate contextual information
+      const contextualInfo = calculateContextualInfo(
+        databaseMatch.medication,
+        schedules,
+        todayLogs
+      );
+
+      // Step 5: Combine all information
+      const enhancedResult: EnhancedPillResult = {
+        identification,
+        databaseMatch,
+        interactions,
+        contextualInfo
+      };
+
+      setResult(enhancedResult);
+
+      // Show appropriate toast
+      if (identification.identified) {
+        if (databaseMatch.exists) {
+          toast.success(`Identified: ${identification.name} - Found in your medications!`);
+        } else {
+          toast.info(`Identified: ${identification.name} - Not in your list`);
+        }
+      }
+
     } catch (error: any) {
       console.error('Error analyzing pill:', error);
       if (error?.message?.includes('Rate limit')) {
@@ -54,6 +288,7 @@ export const CameraView = () => {
       }
     } finally {
       setIsAnalyzing(false);
+      setLoadingStage('');
     }
   };
 
@@ -172,26 +407,35 @@ export const CameraView = () => {
           {isAnalyzing && isStreaming && (
             <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-sm flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Analyzing...
+              {loadingStage || 'Analyzing...'}
             </div>
           )}
           
           {result && isStreaming && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-              {result.identified ? (
+              {result.identification.identified ? (
                 <div className="space-y-2 text-white">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold text-lg">{result.name}</p>
+                    <p className="font-semibold text-lg">{result.identification.name}</p>
                     <span className="text-sm opacity-90">
-                      {(result.confidence * 100).toFixed(0)}% confident
+                      {(result.identification.confidence * 100).toFixed(0)}% confident
                     </span>
                   </div>
-                  {result.description && (
-                    <p className="text-sm opacity-80">{result.description}</p>
+                  
+                  {result.databaseMatch.exists ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-sm">✓ In your medications</span>
+                      {result.contextualInfo.shouldTakeNow && (
+                        <span className="text-blue-400 text-sm">• Time to take</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-yellow-400 text-sm">⚠️ Not in your list</span>
                   )}
-                  {result.warning && (
-                    <p className="text-xs text-orange-300 mt-2">
-                      ⚠️ {result.warning}
+                  
+                  {result.interactions?.has_interactions && (
+                    <p className="text-xs text-red-300">
+                      ⚠️ {result.interactions.interactions.length} interaction(s) detected
                     </p>
                   )}
                 </div>
@@ -199,7 +443,7 @@ export const CameraView = () => {
                 <div className="text-white">
                   <p className="text-sm opacity-90">Unable to identify pill</p>
                   <p className="text-xs opacity-70 mt-1">
-                    {result.description || "Try adjusting the angle or lighting"}
+                    {result.identification.description || "Try adjusting the angle or lighting"}
                   </p>
                 </div>
               )}
@@ -208,45 +452,179 @@ export const CameraView = () => {
         </div>
       </Card>
 
-      {/* Result card for upload mode */}
+      {/* Smart Context-Aware Result Display */}
       {result && !isStreaming && (
-        <Card className="p-4">
-          {result.identified ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{result.name}</h3>
+        <div className="space-y-3">
+          {/* Basic Identification Card */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-lg">
+                {result.identification.identified 
+                  ? result.identification.name 
+                  : "Unable to Identify"}
+              </h3>
+              {result.identification.identified && (
                 <span className="text-sm text-muted-foreground">
-                  {(result.confidence * 100).toFixed(0)}% confident
+                  {(result.identification.confidence * 100).toFixed(0)}% confident
                 </span>
-              </div>
-              {result.description && (
-                <p className="text-sm text-muted-foreground">{result.description}</p>
-              )}
-              {result.warning && (
-                <Alert className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">
-                    {result.warning}
-                  </AlertDescription>
-                </Alert>
               )}
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="font-medium">Unable to identify pill</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {result.description || "Try a clearer image or different angle"}
+
+            {result.identification.description && (
+              <p className="text-sm text-muted-foreground mb-3">
+                {result.identification.description}
               </p>
-            </div>
+            )}
+
+            {result.identification.warning && (
+              <Alert className="mb-3">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  {result.identification.warning}
+                </AlertDescription>
+              </Alert>
+            )}
+          </Card>
+
+          {/* Database Match Information */}
+          {result.identification.identified && (
+            <>
+              {result.databaseMatch.exists ? (
+                <Card className="p-4 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                        <CheckCircle className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-900 dark:text-green-100">
+                          Found in Your Medications
+                        </p>
+                        {result.databaseMatch.matchType === 'partial' && (
+                          <p className="text-xs text-green-700 dark:text-green-300">Partial name match</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dosage Mismatch Warning */}
+                    {result.databaseMatch.dosageMismatch && (
+                      <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-700">
+                        <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        <AlertTitle className="text-orange-900 dark:text-orange-100">Dosage Mismatch Detected</AlertTitle>
+                        <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                          <p>Identified: <strong>{result.databaseMatch.dosageMismatch.identified}</strong></p>
+                          <p>In your list: <strong>{result.databaseMatch.dosageMismatch.inDatabase}</strong></p>
+                          <p className="mt-1">⚠️ Please verify with your pharmacist before taking.</p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Schedule Information */}
+                    {!result.databaseMatch.dosageMismatch && (
+                      <div className="space-y-2">
+                        {result.contextualInfo.shouldTakeNow ? (
+                          <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700">
+                            <Clock className="h-4 w-4" />
+                            <AlertTitle className="text-blue-900 dark:text-blue-100">Time to Take This Medication</AlertTitle>
+                            <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                              Scheduled for: {result.contextualInfo.nextScheduledTime && 
+                                formatTime(result.contextualInfo.nextScheduledTime)}
+                            </AlertDescription>
+                          </Alert>
+                        ) : result.contextualInfo.alreadyTakenToday ? (
+                          <div className="text-sm text-muted-foreground">
+                            <p>✓ Already taken today</p>
+                            {result.contextualInfo.timesLeftToday > 0 && (
+                              <p>
+                                {result.contextualInfo.timesLeftToday} dose(s) remaining today
+                                {result.contextualInfo.nextScheduledTime && 
+                                  ` at ${formatTime(result.contextualInfo.nextScheduledTime)}`}
+                              </p>
+                            )}
+                          </div>
+                        ) : result.contextualInfo.nextScheduledTime ? (
+                          <div className="text-sm text-muted-foreground">
+                            <p>Next scheduled: {formatTime(result.contextualInfo.nextScheduledTime)}</p>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            <p>No scheduled doses remaining today</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-4 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <p className="font-semibold text-yellow-900 dark:text-yellow-100">
+                        Not in Your Medication List
+                      </p>
+                    </div>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      This medication is not currently in your tracked medications.
+                    </p>
+                  </div>
+                </Card>
+              )}
+
+              {/* Drug Interactions Warning */}
+              {result.interactions && result.interactions.has_interactions && (
+                <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      <p className="font-semibold text-red-900 dark:text-red-100">
+                        ⚠️ Drug Interactions Detected
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {result.interactions.interactions.slice(0, 2).map((interaction, idx) => (
+                        <Alert 
+                          key={idx}
+                          className={`border ${getSeverityColor(interaction.severity)}`}
+                        >
+                          <AlertTitle className="text-sm font-semibold">
+                            Interacts with: {interaction.drug}
+                          </AlertTitle>
+                          <AlertDescription className="text-xs mt-1">
+                            <p>{interaction.warning}</p>
+                            <p className="mt-1 italic">{interaction.recommendation}</p>
+                          </AlertDescription>
+                        </Alert>
+                      ))}
+                      
+                      {result.interactions.interactions.length > 2 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{result.interactions.interactions.length - 2} more interaction(s)
+                        </p>
+                      )}
+                    </div>
+
+                    <Alert className="border-red-300 bg-red-100 dark:bg-red-900/20">
+                      <AlertDescription className="text-xs text-red-900 dark:text-red-100">
+                        <strong>Important:</strong> Consult your doctor or pharmacist before taking this medication.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </Card>
+              )}
+            </>
           )}
+
+          {/* Clear Results Button */}
           <Button 
             onClick={() => setResult(null)} 
             variant="outline" 
-            className="w-full mt-4"
+            className="w-full"
           >
-            Clear Results
+            Clear Results & Scan Another
           </Button>
-        </Card>
+        </div>
       )}
 
       <div className="flex gap-3">
@@ -271,11 +649,16 @@ export const CameraView = () => {
                 className="pointer-events-none"
               >
                 {isAnalyzing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {loadingStage && <span className="text-xs">{loadingStage}</span>}
+                  </>
                 ) : (
-                  <Upload className="mr-2 h-4 w-4" />
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Image
+                  </>
                 )}
-                Upload Image
               </Button>
             </div>
           </>
