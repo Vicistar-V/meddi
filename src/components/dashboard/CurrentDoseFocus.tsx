@@ -267,7 +267,7 @@ export const CurrentDoseFocus = ({
             ) : (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                {isOverdue ? 'Log Now' : isCurrent ? 'Take All' : 'Take Early'}
+                {isOverdue ? 'Mark as Taken' : isCurrent ? 'Take All' : 'Take Early'}
               </>
             )}
           </Button>
