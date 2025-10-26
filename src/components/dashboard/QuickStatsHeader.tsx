@@ -1,6 +1,7 @@
-import { User, Calendar } from 'lucide-react';
+import { User, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface QuickStatsHeaderProps {
   userName: string;
@@ -50,12 +51,41 @@ export const QuickStatsHeader = ({
         </div>
 
         {/* Today's Progress Bar */}
-        <div className="mt-5 space-y-2">
+        <div className={cn(
+          "mt-5 space-y-2 transition-all duration-500",
+          todayProgress === 100 && "animate-fade-in"
+        )}>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Today's Progress</p>
-            <p className="text-xs font-semibold">{todayProgress}%</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Today's Progress</p>
+              {todayProgress === 100 && (
+                <Sparkles className="h-3.5 w-3.5 text-success animate-pulse" />
+              )}
+            </div>
+            <p className={cn(
+              "text-xs font-semibold transition-colors duration-300",
+              todayProgress === 100 && "text-success"
+            )}>
+              {todayProgress}%
+            </p>
           </div>
-          <Progress value={todayProgress} className="h-2" />
+          <div className={cn(
+            "relative overflow-hidden rounded-full transition-all duration-300",
+            todayProgress === 100 && "shadow-[0_0_20px_rgba(139,195,145,0.4)]"
+          )}>
+            <Progress 
+              value={todayProgress} 
+              className={cn(
+                "h-2 transition-all duration-500",
+                todayProgress === 100 && "bg-success/20"
+              )}
+            />
+          </div>
+          {todayProgress === 100 && (
+            <p className="text-xs text-success font-medium animate-fade-in text-center">
+              🎉 Perfect day! All doses completed!
+            </p>
+          )}
         </div>
       </div>
     </Card>
