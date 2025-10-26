@@ -35,14 +35,14 @@ export const DoseCard = ({
 
   // Status-based styling
   const cardStyles = {
-    completed: "border-green-500/50 bg-gradient-to-br from-green-50/70 to-emerald-50/70 dark:bg-green-950/20 hover:border-green-500/70 shadow-cream",
+    completed: "border-success/30 bg-success-light hover:border-success/50 shadow-vanilla",
     current: "border-primary bg-gradient-cream shadow-lg shadow-warm hover:shadow-xl hover:shadow-primary/30 ring-2 ring-primary/20",
     upcoming: "border-border bg-gradient-cream hover:border-primary/30 hover:shadow-md shadow-cream",
     missed: "border-orange-500/50 bg-gradient-to-br from-orange-50/70 to-amber-50/70 dark:bg-orange-950/20 hover:border-orange-500/70 shadow-cream"
   };
 
   const iconStyles = {
-    completed: "bg-green-500 text-white",
+    completed: "bg-success text-white",
     current: "bg-primary text-primary-foreground animate-pulse",
     upcoming: "bg-secondary text-muted-foreground",
     missed: "bg-orange-500 text-white"
@@ -82,7 +82,7 @@ export const DoseCard = ({
               <div className="flex items-baseline gap-2">
                 <p className={cn(
                   "text-lg font-semibold",
-                  status === 'completed' && "text-green-700 dark:text-green-400",
+                  status === 'completed' && "text-success-dark",
                   status === 'current' && "text-primary",
                   status === 'upcoming' && "text-foreground",
                   status === 'missed' && "text-orange-700 dark:text-orange-400"
@@ -116,7 +116,7 @@ export const DoseCard = ({
           {/* Right: Status Badge & Expand Icon */}
           <div className="flex flex-col items-end gap-2">
             {status === 'completed' && (
-              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+              <span className="text-xs font-medium text-success">
                 Completed
               </span>
             )}

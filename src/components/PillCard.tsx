@@ -15,14 +15,14 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
   return (
     <Card className={cn(
       'transition-all',
-      status === 'taken' && 'border-green-500 bg-green-50',
+      status === 'taken' && 'border-success/30 bg-success-light',
       status === 'missed' && 'border-orange-500 bg-orange-50'
     )}>
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4">
           <div className={cn(
             'flex h-12 w-12 items-center justify-center rounded-full',
-            status === 'taken' && 'bg-green-500',
+            status === 'taken' && 'bg-success',
             status === 'upcoming' && 'bg-primary',
             status === 'missed' && 'bg-orange-500'
           )}>
@@ -45,7 +45,7 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
           </Button>
         )}
         {status === 'taken' && (
-          <div className="text-sm font-medium text-green-600">Completed</div>
+          <div className="text-sm font-medium text-success">Completed</div>
         )}
         {status === 'missed' && (
           <div className="text-sm font-medium text-orange-600">Missed</div>

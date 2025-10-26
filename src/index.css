@@ -53,6 +53,12 @@ All colors MUST be HSL.
     --sidebar-border: 40 35% 85%;
 
     --sidebar-ring: 38 60% 65%;
+
+    /* Creamy green success colors */
+    --success: 85 35% 50%;
+    --success-foreground: 45 50% 97%;
+    --success-light: 85 40% 92%;
+    --success-dark: 85 40% 25%;
   }
 
   .dark {

@@ -35,7 +35,7 @@ export const DailyStatsCard = ({
             </div>
             <span className={cn(
               "text-lg font-bold",
-              adherence >= 80 ? "text-green-600" : "text-orange-600"
+              adherence >= 80 ? "text-success" : "text-orange-600"
             )}>
               {adherence}%
             </span>
@@ -44,8 +44,8 @@ export const DailyStatsCard = ({
           {/* Completed */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
+                <CheckCircle className="h-4 w-4 text-success" />
               </div>
               <span className="text-sm font-medium">Completed</span>
             </div>

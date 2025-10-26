@@ -107,8 +107,8 @@ export const CompactTimeline = ({
             const statusConfig = {
               completed: {
                 icon: Check,
-                iconBg: 'bg-green-500 text-white',
-                textColor: 'text-green-700 dark:text-green-400',
+                iconBg: 'bg-success text-white',
+                textColor: 'text-success-dark',
                 label: null
               },
               current: {
@@ -140,7 +140,7 @@ export const CompactTimeline = ({
                 key={`${dose.time}-${index}`}
                 className={cn(
                   "rounded-lg border-2 transition-all duration-200",
-                  status === 'completed' && "border-green-500/30 bg-green-50/50 dark:bg-green-950/10",
+                  status === 'completed' && "border-success/30 bg-success-light",
                   status === 'current' && "border-primary/40 bg-primary/5",
                   status === 'missed' && "border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/10",
                   status === 'upcoming' && "border-border bg-background/50",

@@ -106,15 +106,15 @@ export const CurrentDoseFocus = ({
   // All Complete State
   if (status === 'complete') {
     return (
-      <Card className="border-2 bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-950/20 dark:to-emerald-950/20 border-green-500/50">
+      <Card className="border-2 bg-gradient-vanilla border-success/30 shadow-butter">
         <div className="p-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 mb-4">
-            <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 mb-4">
+            <CheckCircle2 className="h-8 w-8 text-success" />
           </div>
-          <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">
+          <h3 className="text-lg font-semibold text-success-dark mb-2">
             All doses complete
           </h3>
-          <p className="text-sm text-green-700 dark:text-green-300">
+          <p className="text-sm text-success-dark/70">
             Next dose: Tomorrow at 8:00 AM
           </p>
         </div>

@@ -38,7 +38,7 @@ export const DailyProgress = ({
           {/* Completed segment */}
           {completedDoses > 0 && (
             <div
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-700 ease-out"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-success to-success/90 transition-all duration-700 ease-out"
               style={{ width: `${(completedDoses / totalDoses) * 100}%` }}
             />
           )}
@@ -70,7 +70,7 @@ export const DailyProgress = ({
           <div className={cn(
             "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
             completedDoses > 0 
-              ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" 
+              ? "bg-success-light text-success-dark" 
               : "bg-secondary text-muted-foreground"
           )}>
             <Check className="h-3.5 w-3.5" />

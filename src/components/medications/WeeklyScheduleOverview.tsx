@@ -20,16 +20,16 @@ export const WeeklyScheduleOverview = ({
   overallAdherence,
 }: WeeklyScheduleOverviewProps) => {
   const getAdherenceColor = (percentage: number) => {
-    if (percentage === 100) return 'text-green-600';
-    if (percentage >= 80) return 'text-green-500';
+    if (percentage === 100) return 'text-success';
+    if (percentage >= 80) return 'text-success/80';
     if (percentage >= 50) return 'text-orange-500';
     if (percentage > 0) return 'text-red-500';
     return 'text-muted-foreground';
   };
 
   const getAdherenceBg = (percentage: number) => {
-    if (percentage === 100) return 'bg-green-500';
-    if (percentage >= 80) return 'bg-green-400';
+    if (percentage === 100) return 'bg-success';
+    if (percentage >= 80) return 'bg-success/80';
     if (percentage >= 50) return 'bg-orange-400';
     if (percentage > 0) return 'bg-red-400';
     return 'bg-muted';

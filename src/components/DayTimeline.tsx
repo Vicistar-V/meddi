@@ -123,16 +123,16 @@ export const DayTimeline = ({
         />
 
         {/* All Done Message */}
-        <div className="rounded-xl border-2 bg-gradient-to-br from-green-50/80 to-emerald-50/80 backdrop-blur-sm dark:from-green-950/20 dark:to-emerald-950/20 p-8 text-center">
+        <div className="rounded-xl border-2 bg-gradient-vanilla backdrop-blur-sm border-success/30 p-8 text-center shadow-butter">
           <div className="mx-auto max-w-sm space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 animate-in zoom-in duration-500">
-              <Sparkles className="h-8 w-8 text-green-600 dark:text-green-400" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 animate-in zoom-in duration-500">
+              <Sparkles className="h-8 w-8 text-success" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
+              <h3 className="text-lg font-semibold text-success-dark">
                 Amazing Work! 🎉
               </h3>
-              <p className="mt-2 text-sm text-green-700 dark:text-green-300">
+              <p className="mt-2 text-sm text-success-dark/70">
                 You've taken all your medications for today. Keep up the great streak!
               </p>
             </div>

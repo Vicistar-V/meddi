@@ -50,7 +50,7 @@ export const MedicationListItem = ({
 
   // Get adherence color
   const getAdherenceColor = (rate: number) => {
-    if (rate >= 80) return 'text-green-600';
+    if (rate >= 80) return 'text-success';
     if (rate >= 50) return 'text-orange-600';
     return 'text-red-600';
   };

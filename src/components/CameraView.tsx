@@ -424,7 +424,7 @@ export const CameraView = () => {
                   
                   {result.databaseMatch.exists ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-green-400 text-sm">✓ In your medications</span>
+                      <span className="text-success text-sm">✓ In your medications</span>
                       {result.contextualInfo.shouldTakeNow && (
                         <span className="text-blue-400 text-sm">• Time to take</span>
                       )}
@@ -490,18 +490,18 @@ export const CameraView = () => {
           {result.identification.identified && (
             <>
               {result.databaseMatch.exists ? (
-                <Card className="p-4 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+                <Card className="p-4 border-success/30 bg-success-light">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-full bg-success flex items-center justify-center">
                         <CheckCircle className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-green-900 dark:text-green-100">
+                        <p className="font-semibold text-success-dark">
                           Found in Your Medications
                         </p>
                         {result.databaseMatch.matchType === 'partial' && (
-                          <p className="text-xs text-green-700 dark:text-green-300">Partial name match</p>
+                          <p className="text-xs text-success-dark/70">Partial name match</p>
                         )}
                       </div>
                     </div>

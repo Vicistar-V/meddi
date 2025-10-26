@@ -125,7 +125,7 @@ export const InteractionScanButton = ({
             <DialogTitle className="flex items-center gap-2">
               {scanResults.length === 0 ? (
                 <>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-success" />
                   No Interactions Found
                 </>
               ) : (

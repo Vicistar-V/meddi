@@ -74,7 +74,7 @@ export const QuickStatsHeader = ({
           <div className="flex items-center gap-2 rounded-full bg-background/50 px-3 py-1.5">
             <TrendingUp className={cn(
               "h-4 w-4",
-              weeklyAdherence >= 80 ? "text-green-600" : "text-orange-600"
+              weeklyAdherence >= 80 ? "text-success" : "text-orange-600"
             )} />
             <div>
               <p className="text-xs text-muted-foreground">This Week</p>
