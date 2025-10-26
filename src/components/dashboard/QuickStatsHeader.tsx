@@ -1,7 +1,6 @@
-import { User, Calendar, TrendingUp } from 'lucide-react';
+import { User, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { ProgressRing } from '@/components/ui/progress-ring';
-import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface QuickStatsHeaderProps {
   userName: string;
@@ -50,37 +49,13 @@ export const QuickStatsHeader = ({
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="mt-5 flex flex-wrap items-center gap-6">
-          {/* Today's Progress */}
-          <div className="flex items-center gap-3">
-            <ProgressRing progress={todayProgress} size={48} strokeWidth={4} />
-            <div>
-              <p className="text-xs text-muted-foreground">Today</p>
-              <p className="text-sm font-semibold">Progress</p>
-            </div>
+        {/* Today's Progress Bar */}
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Today's Progress</p>
+            <p className="text-xs font-semibold">{todayProgress}%</p>
           </div>
-
-          {/* Streak */}
-          <div className="flex items-center gap-2 rounded-full bg-background/50 px-3 py-1.5">
-            <span className="text-lg">🔥</span>
-            <div>
-              <p className="text-xs text-muted-foreground">Streak</p>
-              <p className="text-sm font-semibold">{weekStreak} {weekStreak === 1 ? 'day' : 'days'}</p>
-            </div>
-          </div>
-
-          {/* Weekly Adherence */}
-          <div className="flex items-center gap-2 rounded-full bg-background/50 px-3 py-1.5">
-            <TrendingUp className={cn(
-              "h-4 w-4",
-              weeklyAdherence >= 80 ? "text-success" : "text-orange-600"
-            )} />
-            <div>
-              <p className="text-xs text-muted-foreground">This Week</p>
-              <p className="text-sm font-semibold">{weeklyAdherence}%</p>
-            </div>
-          </div>
+          <Progress value={todayProgress} className="h-2" />
         </div>
       </div>
     </Card>
