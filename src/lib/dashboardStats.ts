@@ -5,21 +5,33 @@ export const calculateDailyProgress = (
   schedules: Schedule[],
   todayLogs: MedicationLog[]
 ): number => {
-  if (schedules.length === 0) return 0;
+  // Filter to only today's schedules
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const todaySchedules = schedules.filter(schedule => 
+    schedule.days_of_week.includes(today)
+  );
   
-  const completedCount = schedules.filter(schedule =>
+  if (todaySchedules.length === 0) return 0;
+  
+  const completedCount = todaySchedules.filter(schedule =>
     todayLogs.some(log => log.schedule_id === schedule.id && log.status === 'taken')
   ).length;
   
-  return Math.round((completedCount / schedules.length) * 100);
+  return Math.round((completedCount / todaySchedules.length) * 100);
 };
 
 export const getDailyStats = (
   schedules: Schedule[],
   todayLogs: MedicationLog[]
 ) => {
-  const total = schedules.length;
-  const completed = schedules.filter(schedule =>
+  // Filter to only today's schedules
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const todaySchedules = schedules.filter(schedule => 
+    schedule.days_of_week.includes(today)
+  );
+  
+  const total = todaySchedules.length;
+  const completed = todaySchedules.filter(schedule =>
     todayLogs.some(log => log.schedule_id === schedule.id && log.status === 'taken')
   ).length;
   const remaining = total - completed;
