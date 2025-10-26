@@ -3,7 +3,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Loader2, Clock, Calendar, FileText, User, Building2, AlertTriangle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { CheckCircle2, Loader2, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { ManualEntryFormState } from '../AddMedicationManual';
 import { useMedications } from '@/hooks/useMedications';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface StepReviewConfirmProps {
   formData: ManualEntryFormState;
+  updateFormData: (updates: Partial<ManualEntryFormState>) => void;
   onComplete: (formData: ManualEntryFormState) => void;
 }
 
@@ -25,7 +28,7 @@ const DAYS_MAP: Record<string, string> = {
   sun: 'Sun'
 };
 
-export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmProps) => {
+export const StepReviewConfirm = ({ formData, updateFormData, onComplete }: StepReviewConfirmProps) => {
   const [isChecking, setIsChecking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [interactions, setInteractions] = useState<any[]>([]);
@@ -80,7 +83,7 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
         name: formData.name,
         dosage: `${formData.dosage}${formData.dosageUnit}`,
         instructions: formData.instructions || null,
-        pill_image_url: formData.pillImageUrl || null
+        pill_image_url: null
       });
 
       // Save schedules
@@ -134,29 +137,11 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
 
           {/* Medication Details */}
           <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              {formData.pillImageUrl && (
-                <img
-                  src={formData.pillImageUrl}
-                  alt="Pill"
-                  className="w-20 h-20 object-cover rounded-lg border border-border flex-shrink-0"
-                />
-              )}
-              <div className="flex-1">
-                <h4 className="text-lg font-semibold text-foreground">{formData.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {formData.dosage}{formData.dosageUnit} • {formData.formType}
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <Badge variant="secondary">{formData.medicationType}</Badge>
-                  {formData.genericName && (
-                    <Badge variant="outline">Generic: {formData.genericName}</Badge>
-                  )}
-                  {formData.brandName && (
-                    <Badge variant="outline">Brand: {formData.brandName}</Badge>
-                  )}
-                </div>
-              </div>
+            <div>
+              <h4 className="text-lg font-semibold text-foreground">{formData.name}</h4>
+              <p className="text-sm text-muted-foreground">
+                {formData.dosage}{formData.dosageUnit}
+              </p>
             </div>
           </div>
 
@@ -198,69 +183,21 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
             )}
           </div>
 
-          {formData.instructions && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-foreground">Instructions</span>
-                </div>
-                <p className="text-sm text-muted-foreground pl-6">{formData.instructions}</p>
-                {formData.quickTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pl-6">
-                    {formData.quickTags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {formData.notes && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <span className="text-sm font-medium text-foreground">Important Notes</span>
-                <p className="text-sm text-muted-foreground">{formData.notes}</p>
-              </div>
-            </>
-          )}
-
-          {(formData.doctorName || formData.pharmacyName) && (
-            <>
-              <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formData.doctorName && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">Doctor</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground pl-6">{formData.doctorName}</p>
-                    {formData.doctorPhone && (
-                      <p className="text-xs text-muted-foreground pl-6">{formData.doctorPhone}</p>
-                    )}
-                  </div>
-                )}
-                {formData.pharmacyName && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">Pharmacy</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground pl-6">{formData.pharmacyName}</p>
-                    {formData.pharmacyPhone && (
-                      <p className="text-xs text-muted-foreground pl-6">{formData.pharmacyPhone}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+          <Separator />
+          
+          {/* Special Instructions */}
+          <div className="space-y-2">
+            <Label htmlFor="instructions" className="text-sm font-medium">
+              Special Instructions <span className="text-muted-foreground text-xs">(optional)</span>
+            </Label>
+            <Textarea
+              id="instructions"
+              value={formData.instructions}
+              onChange={(e) => updateFormData({ instructions: e.target.value })}
+              placeholder="e.g., Take with food, avoid dairy, etc."
+              className="bg-background min-h-[80px]"
+            />
+          </div>
         </div>
       </Card>
 

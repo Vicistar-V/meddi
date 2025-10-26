@@ -66,9 +66,9 @@ export default function AddMedication() {
       // Save medication
       const medication = await addMedication.mutateAsync({
         name: formData.name,
-        dosage: formData.dosage,
+        dosage: `${formData.dosage}${formData.dosageUnit}`,
         instructions: formData.instructions || null,
-        pill_image_url: formData.pillImageUrl || null,
+        pill_image_url: null,
       });
 
       // Save all schedules

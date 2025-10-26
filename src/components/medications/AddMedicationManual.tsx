@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { StepBasicDetails } from './manual-entry/StepBasicDetails';
 import { StepScheduling } from './manual-entry/StepScheduling';
-import { StepInstructions } from './manual-entry/StepInstructions';
-import { StepPrescriptionInfo } from './manual-entry/StepPrescriptionInfo';
 import { StepReviewConfirm } from './manual-entry/StepReviewConfirm';
 import { ProgressStepper } from './manual-entry/ProgressStepper';
 import { MedicationPreviewCard } from './manual-entry/MedicationPreviewCard';
@@ -14,11 +12,6 @@ export interface ManualEntryFormState {
   name: string;
   dosage: string;
   dosageUnit: string;
-  formType: string;
-  medicationType: string;
-  genericName: string;
-  brandName: string;
-  pillImageUrl: string;
   
   // Step 2: Scheduling
   schedules: Array<{
@@ -31,23 +24,8 @@ export interface ManualEntryFormState {
   startDate: string;
   endDate: string;
   
-  // Step 3: Instructions
+  // Step 3: Review & Instructions
   instructions: string;
-  notes: string;
-  quickTags: string[];
-  
-  // Step 4: Prescription
-  doctorName: string;
-  doctorPhone: string;
-  pharmacyName: string;
-  pharmacyPhone: string;
-  prescriptionNumber: string;
-  refillQuantity: string;
-  currentQuantity: string;
-  lastRefillDate: string;
-  refillsRemaining: string;
-  expirationDate: string;
-  costPerRefill: string;
 }
 
 interface AddMedicationManualProps {
@@ -56,11 +34,9 @@ interface AddMedicationManualProps {
 }
 
 const STEPS = [
-  { id: 1, label: 'Details', description: 'Medication basics' },
+  { id: 1, label: 'Details', description: 'Name & dosage' },
   { id: 2, label: 'Schedule', description: 'When to take' },
-  { id: 3, label: 'Instructions', description: 'How to take' },
-  { id: 4, label: 'Prescription', description: 'Optional info' },
-  { id: 5, label: 'Review', description: 'Confirm & save' }
+  { id: 3, label: 'Review', description: 'Confirm & save' }
 ];
 
 export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManualProps) => {
@@ -69,29 +45,11 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
     name: '',
     dosage: '',
     dosageUnit: 'mg',
-    formType: 'Tablet',
-    medicationType: 'Prescription',
-    genericName: '',
-    brandName: '',
-    pillImageUrl: '',
     schedules: [],
     duration: 'ongoing',
     startDate: '',
     endDate: '',
-    instructions: '',
-    notes: '',
-    quickTags: [],
-    doctorName: '',
-    doctorPhone: '',
-    pharmacyName: '',
-    pharmacyPhone: '',
-    prescriptionNumber: '',
-    refillQuantity: '',
-    currentQuantity: '',
-    lastRefillDate: '',
-    refillsRemaining: '',
-    expirationDate: '',
-    costPerRefill: ''
+    instructions: ''
   });
 
   const updateFormData = (updates: Partial<ManualEntryFormState>) => {
@@ -105,10 +63,6 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
       case 2:
         return formData.schedules.length > 0;
       case 3:
-        return true; // Optional step
-      case 4:
-        return true; // Optional step
-      case 5:
         return true;
       default:
         return false;
@@ -116,7 +70,7 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
   };
 
   const handleNext = () => {
-    if (canProceed() && currentStep < 5) {
+    if (canProceed() && currentStep < 3) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -140,11 +94,7 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
       case 2:
         return <StepScheduling formData={formData} updateFormData={updateFormData} />;
       case 3:
-        return <StepInstructions formData={formData} updateFormData={updateFormData} />;
-      case 4:
-        return <StepPrescriptionInfo formData={formData} updateFormData={updateFormData} />;
-      case 5:
-        return <StepReviewConfirm formData={formData} onComplete={onComplete} />;
+        return <StepReviewConfirm formData={formData} updateFormData={updateFormData} onComplete={onComplete} />;
       default:
         return null;
     }
@@ -171,7 +121,7 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
       </div>
 
       {/* Navigation Buttons */}
-      {currentStep < 5 && (
+      {currentStep < 3 && (
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <Button
             type="button"
@@ -187,7 +137,7 @@ export const AddMedicationManual = ({ onComplete, onCancel }: AddMedicationManua
             onClick={handleNext}
             disabled={!canProceed()}
           >
-            {currentStep === 4 ? 'Review' : 'Next'}
+            {currentStep === 2 ? 'Review' : 'Next'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

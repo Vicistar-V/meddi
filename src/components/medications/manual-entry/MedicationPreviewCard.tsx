@@ -21,7 +21,7 @@ const DAYS_MAP: Record<string, string> = {
 export const MedicationPreviewCard = ({ formData }: MedicationPreviewCardProps) => {
   const hasBasicInfo = formData.name || formData.dosage;
   const hasSchedules = formData.schedules.length > 0;
-  const hasInstructions = formData.instructions || formData.quickTags.length > 0;
+  const hasInstructions = formData.instructions;
 
   return (
     <div className="sticky top-6">
@@ -46,15 +46,6 @@ export const MedicationPreviewCard = ({ formData }: MedicationPreviewCardProps) 
 
           {hasBasicInfo && (
             <>
-              {/* Pill Image */}
-              {formData.pillImageUrl && (
-                <img
-                  src={formData.pillImageUrl}
-                  alt="Pill preview"
-                  className="w-full h-32 object-cover rounded-lg border border-border"
-                />
-              )}
-
               {/* Name & Dosage */}
               <div>
                 <h4 className="font-semibold text-foreground text-lg">
@@ -62,19 +53,14 @@ export const MedicationPreviewCard = ({ formData }: MedicationPreviewCardProps) 
                 </h4>
                 {formData.dosage && (
                   <p className="text-sm text-muted-foreground">
-                    {formData.dosage}{formData.dosageUnit} • {formData.formType}
+                    {formData.dosage}{formData.dosageUnit}
                   </p>
                 )}
-                <div className="flex gap-2 mt-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {formData.medicationType}
+                {formData.duration === 'limited' && (
+                  <Badge variant="outline" className="text-xs mt-2">
+                    Limited Time
                   </Badge>
-                  {formData.duration === 'limited' && (
-                    <Badge variant="outline" className="text-xs">
-                      Limited Time
-                    </Badge>
-                  )}
-                </div>
+                )}
               </div>
 
               {hasSchedules && (
@@ -119,37 +105,9 @@ export const MedicationPreviewCard = ({ formData }: MedicationPreviewCardProps) 
                       <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs font-medium text-foreground">Instructions</span>
                     </div>
-                    {formData.instructions && (
-                      <p className="text-xs text-muted-foreground pl-5 line-clamp-3">
-                        {formData.instructions}
-                      </p>
-                    )}
-                    {formData.quickTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pl-5">
-                        {formData.quickTags.slice(0, 3).map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-[10px]">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {formData.quickTags.length > 3 && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            +{formData.quickTags.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {formData.currentQuantity && (
-                <>
-                  <Separator />
-                  <div className="text-xs">
-                    <span className="text-muted-foreground">Supply: </span>
-                    <span className="font-medium text-foreground">
-                      {formData.currentQuantity} pills
-                    </span>
+                    <p className="text-xs text-muted-foreground pl-5 line-clamp-3">
+                      {formData.instructions}
+                    </p>
                   </div>
                 </>
               )}
