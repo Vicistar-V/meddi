@@ -50,42 +50,35 @@ export const QuickStatsHeader = ({
           </div>
         </div>
 
-        {/* Stats Grid - Mobile Optimized */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Today's Progress - Featured Card */}
-          <div className="sm:col-span-1 flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <ProgressRing progress={todayProgress} size={56} strokeWidth={5} />
+        {/* Stats Row */}
+        <div className="mt-5 flex flex-wrap items-center gap-6">
+          {/* Today's Progress */}
+          <div className="flex items-center gap-3">
+            <ProgressRing progress={todayProgress} size={48} strokeWidth={4} />
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Today</p>
-              <p className="text-base font-semibold">Progress</p>
+              <p className="text-xs text-muted-foreground">Today</p>
+              <p className="text-sm font-semibold">Progress</p>
             </div>
           </div>
 
-          {/* Streak Card */}
-          <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
-              <span className="text-2xl">🔥</span>
-            </div>
+          {/* Streak */}
+          <div className="flex items-center gap-2 rounded-full bg-background/50 px-3 py-1.5">
+            <span className="text-lg">🔥</span>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Streak</p>
-              <p className="text-base font-semibold">{weekStreak} {weekStreak === 1 ? 'day' : 'days'}</p>
+              <p className="text-xs text-muted-foreground">Streak</p>
+              <p className="text-sm font-semibold">{weekStreak} {weekStreak === 1 ? 'day' : 'days'}</p>
             </div>
           </div>
 
-          {/* Weekly Adherence Card */}
-          <div className="flex items-center gap-3 rounded-xl bg-background/50 p-4">
-            <div className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full",
-              weeklyAdherence >= 80 ? "bg-green-500/10" : "bg-orange-500/10"
-            )}>
-              <TrendingUp className={cn(
-                "h-5 w-5",
-                weeklyAdherence >= 80 ? "text-green-600" : "text-orange-600"
-              )} />
-            </div>
+          {/* Weekly Adherence */}
+          <div className="flex items-center gap-2 rounded-full bg-background/50 px-3 py-1.5">
+            <TrendingUp className={cn(
+              "h-4 w-4",
+              weeklyAdherence >= 80 ? "text-green-600" : "text-orange-600"
+            )} />
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">This Week</p>
-              <p className="text-base font-semibold">{weeklyAdherence}%</p>
+              <p className="text-xs text-muted-foreground">This Week</p>
+              <p className="text-sm font-semibold">{weeklyAdherence}%</p>
             </div>
           </div>
         </div>
