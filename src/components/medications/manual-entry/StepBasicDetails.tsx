@@ -2,8 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Pill, Camera, Upload, X } from 'lucide-react';
+import { Pill } from 'lucide-react';
 import { ManualEntryFormState } from '../AddMedicationManual';
 import { DosageInput } from './DosageInput';
 
@@ -16,21 +15,6 @@ const FORM_TYPES = ['Tablet', 'Capsule', 'Liquid', 'Injection', 'Topical', 'Inha
 const MEDICATION_TYPES = ['Prescription', 'OTC', 'Vitamin', 'Supplement', 'Herbal'];
 
 export const StepBasicDetails = ({ formData, updateFormData }: StepBasicDetailsProps) => {
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateFormData({ pillImageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    updateFormData({ pillImageUrl: '' });
-  };
-
   return (
     <Card className="p-6 bg-gradient-cream shadow-warm border-border/50">
       <div className="space-y-6">
@@ -133,63 +117,6 @@ export const StepBasicDetails = ({ formData, updateFormData }: StepBasicDetailsP
               className="bg-background"
             />
           </div>
-        </div>
-
-        {/* Pill Image Upload */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Pill Image <span className="text-muted-foreground text-xs">(optional)</span>
-          </Label>
-          
-          {!formData.pillImageUrl ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  id="pill-camera"
-                />
-                <Button type="button" variant="outline" className="w-full pointer-events-none">
-                  <Camera className="mr-2 h-4 w-4" />
-                  Take Photo
-                </Button>
-              </div>
-
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  id="pill-upload"
-                />
-                <Button type="button" variant="outline" className="w-full pointer-events-none">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Choose File
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="relative">
-              <img
-                src={formData.pillImageUrl}
-                alt="Pill preview"
-                className="w-full h-32 object-cover rounded-lg border border-border"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="destructive"
-                className="absolute top-2 right-2"
-                onClick={removeImage}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     </Card>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Camera, CameraOff, Loader2, AlertCircle } from "lucide-react";
+import { Camera, CameraOff, Loader2, AlertCircle, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,26 +22,9 @@ export const CameraView = () => {
   const [result, setResult] = useState<PillIdentification | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyzeIntervalRef = useRef<number>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const captureAndAnalyze = async () => {
-    if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas to base64
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
+  const analyzeImage = async (imageData: string) => {
     setIsAnalyzing(true);
 
     try {
@@ -72,6 +55,39 @@ export const CameraView = () => {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        analyzeImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const captureAndAnalyze = async () => {
+    if (!videoRef.current || !canvasRef.current || isAnalyzing) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to base64
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+    await analyzeImage(imageData);
   };
 
   const startCamera = async () => {
@@ -194,10 +210,34 @@ export const CameraView = () => {
 
       <div className="flex gap-3">
         {!isStreaming ? (
-          <Button onClick={startCamera} className="flex-1">
-            <Camera className="mr-2 h-4 w-4" />
-            Start Camera
-          </Button>
+          <>
+            <Button onClick={startCamera} className="flex-1">
+              <Camera className="mr-2 h-4 w-4" />
+              Start Camera
+            </Button>
+            <div className="relative">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isAnalyzing}
+              />
+              <Button 
+                variant="outline" 
+                disabled={isAnalyzing}
+                className="pointer-events-none"
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                Upload Image
+              </Button>
+            </div>
+          </>
         ) : (
           <>
             <Button onClick={stopCamera} variant="destructive" className="flex-1">
@@ -222,9 +262,14 @@ export const CameraView = () => {
       <Alert>
         <AlertTitle>How to use</AlertTitle>
         <AlertDescription className="space-y-2">
+          <p><strong>Option 1: Live Camera</strong></p>
           <p>1. Click "Start Camera" to begin</p>
           <p>2. Point your camera at a pill and hold steady</p>
           <p>3. Click "Analyze Now" when ready</p>
+          <p className="mt-3"><strong>Option 2: Upload Image</strong></p>
+          <p>1. Click "Upload Image" to select a photo from your device</p>
+          <p>2. Choose a clear photo of the pill</p>
+          <p>3. Analysis will start automatically</p>
           <p className="text-xs text-muted-foreground mt-2">
             💡 Tip: Each analysis uses AI credits, so analyze only when you have a clear view
           </p>
