@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/BottomNav';
-import { AddMedicationFlow } from '@/components/AddMedicationFlow';
 import { MedicationsHeader } from '@/components/medications/MedicationsHeader';
 import { MedicationSearchBar } from '@/components/medications/MedicationSearchBar';
 import { MedicationListItem } from '@/components/medications/MedicationListItem';
@@ -32,10 +32,11 @@ import {
 import { Pill } from 'lucide-react';
 
 const Medications = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { 
+  const {
     medications, 
     schedules, 
     todayLogs, 
@@ -52,7 +53,6 @@ const Medications = () => {
   );
 
   // State
-  const [showAddFlow, setShowAddFlow] = useState(false);
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -275,7 +275,7 @@ const Medications = () => {
             medicationCount={0}
             scheduleCount={0}
             adherenceRate={0}
-            onAddClick={() => setShowAddFlow(true)}
+            onAddClick={() => navigate('/medications/add')}
           />
           
           <div className="flex flex-col items-center justify-center py-20">
@@ -289,7 +289,6 @@ const Medications = () => {
           </div>
         </div>
         <BottomNav />
-        <AddMedicationFlow open={showAddFlow} onOpenChange={setShowAddFlow} />
       </div>
     );
   }
@@ -306,7 +305,7 @@ const Medications = () => {
               medicationCount={medications.length}
               scheduleCount={schedules.length}
               adherenceRate={overallAdherence}
-              onAddClick={() => setShowAddFlow(true)}
+              onAddClick={() => navigate('/medications/add')}
             />
           </div>
           <InteractionScanButton medications={medications} />
@@ -378,8 +377,6 @@ const Medications = () => {
       <BottomNav />
 
       {/* Modals and Dialogs */}
-      <AddMedicationFlow open={showAddFlow} onOpenChange={setShowAddFlow} />
-
       {editingMedication && (
         <EditMedicationDialog
           open={!!editingMedication}

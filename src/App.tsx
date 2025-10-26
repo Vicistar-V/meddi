@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Medications from "./pages/Medications";
+import AddMedication from "./pages/AddMedication";
 import Verify from "./pages/Verify";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/medications" element={<ProtectedRoute><Medications /></ProtectedRoute>} />
+            <Route path="/medications/add" element={<ProtectedRoute><AddMedication /></ProtectedRoute>} />
             <Route path="/verify" element={<ProtectedRoute><Verify /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
