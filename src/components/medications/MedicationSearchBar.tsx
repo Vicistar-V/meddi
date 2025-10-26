@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { InteractionScanButton } from './InteractionScanButton';
+import { Medication } from '@/hooks/useMedications';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,7 @@ interface MedicationSearchBarProps {
   onFilterChange?: (filter: 'all' | 'active') => void;
   sortBy?: 'name' | 'recent' | 'frequency';
   onSortChange?: (sort: 'name' | 'recent' | 'frequency') => void;
+  medications?: Medication[];
 }
 
 export const MedicationSearchBar = ({
@@ -28,6 +31,7 @@ export const MedicationSearchBar = ({
   onFilterChange,
   sortBy = 'name',
   onSortChange,
+  medications = [],
 }: MedicationSearchBarProps) => {
   const [localSearch, setLocalSearch] = useState(searchTerm);
 
@@ -69,6 +73,13 @@ export const MedicationSearchBar = ({
 
       {/* Filter and Sort Controls */}
       <div className="flex gap-2">
+        {/* Drug Safety Check Button */}
+        {medications.length > 0 && (
+          <div className="lg:hidden">
+            <InteractionScanButton medications={medications} />
+          </div>
+        )}
+
         {/* Filter Toggle */}
         {onFilterChange && (
           <div className="flex gap-1 bg-muted p-1 rounded-lg">

@@ -317,6 +317,7 @@ const Medications = () => {
               onFilterChange={setStatusFilter}
               sortBy={sortBy}
               onSortChange={setSortBy}
+              medications={medications}
             />
 
             {/* Medications List */}
