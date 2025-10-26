@@ -32,7 +32,7 @@ export const Navbar = ({ onAddClick }: NavbarProps = {}) => {
           onClick={() => navigate('/dashboard')}
         >
           <Pill className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">Pill-Pal AI</span>
+          <span className="text-xl font-bold">Meddi</span>
         </div>
         
         <div className="flex items-center gap-2">
