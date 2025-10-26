@@ -80,65 +80,10 @@ export default {
             height: "0",
           },
         },
-        "slide-indicator": {
-          "0%": {
-            transform: "translateX(var(--start-position))",
-          },
-          "100%": {
-            transform: "translateX(var(--end-position))",
-          },
-        },
-        "nav-icon-bounce": {
-          "0%, 100%": {
-            transform: "scale(1)",
-          },
-          "50%": {
-            transform: "scale(1.1)",
-          },
-        },
-        "ripple": {
-          "0%": {
-            transform: "scale(0)",
-            opacity: "0.6",
-          },
-          "100%": {
-            transform: "scale(4)",
-            opacity: "0",
-          },
-        },
-        "spring-in": {
-          "0%": {
-            transform: "scale(0.8)",
-            opacity: "0",
-          },
-          "50%": {
-            transform: "scale(1.1)",
-            opacity: "0.8",
-          },
-          "100%": {
-            transform: "scale(1)",
-            opacity: "1",
-          },
-        },
-        "float-up": {
-          "0%": {
-            transform: "translateY(8px)",
-            opacity: "0",
-          },
-          "100%": {
-            transform: "translateY(0)",
-            opacity: "1",
-          },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "slide-indicator": "slide-indicator 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "nav-icon-bounce": "nav-icon-bounce 0.3s ease-out",
-        "ripple": "ripple 0.6s ease-out",
-        "spring-in": "spring-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        "float-up": "float-up 0.3s ease-out",
       },
       backgroundImage: {
         'gradient-cream': 'linear-gradient(135deg, hsl(40, 20%, 96%) 0%, hsl(35, 25%, 94%) 100%)',

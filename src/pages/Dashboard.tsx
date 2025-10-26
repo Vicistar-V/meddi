@@ -44,7 +44,7 @@ export default function Dashboard() {
   const hasMedications = medications.length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-20">
       <Navbar onAddClick={() => setShowAddMedication(true)} />
       
       {/* Zone 1: The Action Center (Hero Section) */}
@@ -100,7 +100,7 @@ export default function Dashboard() {
       
       {/* Zone 3: Floating Action Button */}
       <Button 
-        className="fixed bottom-32 right-6 h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
+        className="fixed bottom-24 right-6 h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
         size="icon"
         onClick={() => navigate('/verify')}
         aria-label="Identify Pill"
