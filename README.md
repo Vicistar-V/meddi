@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# Meddi
 
-## Project info
+## Inspiration
 
-**URL**: https://lovable.dev/projects/6e6a9680-c2ff-46a4-918b-e0d4b252efab
+It started with my mom. I was visiting one day and watched her at the kitchen table, her weekly pill organizer open. She paused, holding two small, nearly identical white pills, a flicker of doubt in her eyes. In that instant, I saw the invisible stress that millions of our parents and loved ones face every single day. A routine that should be about healing was filled with anxiety. Is this the right one? Did I already take this? The consequences of a simple mistake could be serious.
 
-## How can I edit this code?
+Existing apps were just glorified alarms. They added to the noise but did nothing to solve the core problem: the deep-seated fear of getting it wrong. I knew we could do better. I wasn't inspired to build an app; I was inspired to build the peace of mind that my mom, and millions like her, deserve. That is the soul of Meddi.
 
-There are several ways of editing your application.
+## What it does
 
-**Use Lovable**
+Meddi is a smart medication guardian that transforms a user's phone into a tool for safety and certainty. It's not a list, it's a companion that actively helps prevent errors.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6e6a9680-c2ff-46a4-918b-e0d4b252efab) and start prompting.
+*   **Effortless Setup:** Instead of confusing manual entry, Meddi uses AI to read a pharmacy label from a single photo. It instantly understands the medication, dosage, and instructions, building the user's schedule in seconds.
+*   **Instant Verification:** For that critical moment of doubt, the user can simply point their camera at any pill. Meddi uses on-device computer vision to analyze it in real-time, providing an immediate on-screen confirmation: "Yes, this is your 8 AM Lisinopril."
+*   **A Proactive Safety Net:** Before a new medication is even saved, Meddi silently checks it against the user's existing prescriptions for dangerous drug interactions, providing clear, critical warnings to prevent a mistake before it can ever happen.
+*   **A Calm Dashboard:** Meddi presents a clean, simple view of the day, focusing only on the *next* dose. It makes logging medications a gentle, reassuring process, celebrating completion rather than punishing delays.
 
-Changes made via Lovable will be committed automatically to this repo.
+## How I built it
 
-**Use your preferred IDE**
+To build a tool worthy of my mom's trust, I chose a stack focused on security, speed, and cutting-edge intelligence.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+*   **Foundation (Supabase):** I used Supabase for its secure authentication, PostgreSQL database, and storage. Most importantly, I enabled **Row-Level Security** on every table from the start. A user's health data is sacred, and this ensures it remains completely private to them.
+*   **Frontend (React & Vite):** The user interface was built with React, TypeScript, and Vite, creating a fast, reliable, and mobile-first experience that feels like a native application.
+*   **Intelligent Onboarding (Gemini 1.5 Flash):** For the label scanner, I leveraged Google's Gemini model via a Supabase Edge Function. Instead of writing brittle parsing code, I focused on **prompt engineering**, instructing the AI to act as an expert pharmacist, extracting information from the image and returning a perfectly structured JSON object.
+*   **Instant & Private Verification (TensorFlow.js):** The real-time pill identification is powered by a TensorFlow.js model running **directly in the user's browser**. This was a critical choice: it delivers instantaneous results while guaranteeing that the camera feed never leaves the user's device, ensuring absolute privacy.
+*   **Safety Check (OpenFDA API):** The drug interaction warnings are powered by a Supabase Edge Function that communicates directly with the official OpenFDA API, ensuring our safety alerts are based on reliable, authoritative data.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Challenges I ran into
 
-Follow these steps:
+The journey wasn't without its hurdles. My biggest challenge was constantly asking: "Would my mom be able to use this without frustration?"
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+This question forced me to abandon my first approach to label scanning, which was a nightmare of complex code trying to guess what text meant. The breakthrough was reframing the problem for a generative AI model—it was far better at understanding context than my code ever could be.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Another significant challenge was performance. The on-device pill identifier had to feel instant. A slow, lagging analysis would only increase a user's anxiety. I spent hours optimizing the model and the browser's render loop to ensure the verification felt magical, not mechanical.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Accomplishments that I'm proud of
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+I'm incredibly proud of the seamless flow from scanning a label to seeing that medication show up on the daily schedule, with a safety check performed in between. It's a complete safety loop.
 
-**Edit a file directly in GitHub**
+But my proudest accomplishment is the feeling of the app. It's calm. It's reassuring. When a dose is taken, the positive feedback is designed to create a feeling of accomplishment, not just task completion. Building an application that feels like a supportive partner, rather than another chore, is what truly makes me proud of Meddi.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## What I learned
 
-**Use GitHub Codespaces**
+Beyond the technical skills, this project taught me a profound lesson: the most advanced technology is worthless if it doesn't serve a fundamental human need. Building for my mom was the ultimate design constraint. It forced me to prioritize simplicity, privacy, and empathy above all else. I learned that you don't build trust with complex features; you build it with unwavering reliability and a clear demonstration that you care about the user's well-being.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## What's next for Meddi
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/6e6a9680-c2ff-46a4-918b-e0d4b252efab) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+This is just the beginning. The next, most important feature is **Caregiver Connect**. It's for people like me. I want to build a simple, privacy-respecting way for my mom to share her progress, so I can get a quiet notification on my phone that she's taken her morning medication. It's not about tracking; it's about providing a shared sense of peace of mind. Following that, I plan to integrate smart refill reminders and expand the AI's capabilities to help manage more complex medications, continuing the mission of making medication safe and simple for everyone.
