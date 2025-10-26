@@ -15,22 +15,27 @@ import {
   subDays,
   differenceInDays
 } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
-export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
+export const useHistoricalData = (dateRange?: DateRange) => {
   const { user } = useAuth();
+
+  // Calculate start and end dates
+  const startDate = dateRange?.from || subDays(new Date(), 30);
+  const endDate = dateRange?.to || new Date();
 
   // Fetch historical logs
   const { data: historicalLogs = [] } = useQuery({
-    queryKey: ['historical-logs', user?.id, timeframe],
+    queryKey: ['historical-logs', user?.id, startDate.toISOString(), endDate.toISOString()],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const startDate = subDays(new Date(), timeframe);
       const { data, error } = await supabase
         .from('medication_logs')
         .select('*')
         .eq('user_id', user.id)
         .gte('taken_at', startDate.toISOString())
+        .lte('taken_at', endDate.toISOString())
         .order('taken_at', { ascending: false });
 
       if (error) throw error;
@@ -96,17 +101,15 @@ export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
     return streak;
   }, [historicalLogs, schedules]);
 
-  // Calculate monthly adherence
-  const monthlyAdherence = useMemo(() => {
-    const monthStart = startOfMonth(new Date());
-    const monthEnd = endOfMonth(new Date());
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Calculate adherence for the selected date range
+  const rangeAdherence = useMemo(() => {
+    const daysInRange = eachDayOfInterval({ start: startDate, end: endDate });
 
     let totalExpected = 0;
     let totalTaken = 0;
 
-    daysInMonth.forEach(day => {
-      if (day > new Date()) return;
+    daysInRange.forEach(day => {
+      if (day > endDate) return;
 
       const dayOfWeek = format(day, 'EEEE').toLowerCase();
       const daySchedules = schedules.filter(s => 
@@ -125,23 +128,27 @@ export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
     });
 
     return totalExpected > 0 ? Math.round((totalTaken / totalExpected) * 100) : 0;
-  }, [historicalLogs, schedules]);
+  }, [historicalLogs, schedules, startDate, endDate]);
 
-  // Get weekly breakdown (last 4 weeks)
+  // Get weekly breakdown for the date range
   const weeklyBreakdown = useMemo(() => {
-    const now = new Date();
     const weeks: any[] = [];
+    const rangeInDays = differenceInDays(endDate, startDate);
+    const numberOfWeeks = Math.min(Math.ceil(rangeInDays / 7), 8);
 
-    for (let i = 0; i < 4; i++) {
-      const weekStart = startOfWeek(subDays(now, i * 7));
-      const weekEnd = endOfWeek(subDays(now, i * 7));
+    for (let i = 0; i < numberOfWeeks; i++) {
+      const weekEnd = subDays(endDate, i * 7);
+      const weekStart = subDays(weekEnd, 6);
+      
+      if (weekStart < startDate) continue;
+      
       const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
       let totalExpected = 0;
       let totalTaken = 0;
 
       daysInWeek.forEach(day => {
-        if (day > now) return;
+        if (day > endDate || day < startDate) return;
 
         const dayOfWeek = format(day, 'EEEE').toLowerCase();
         const daySchedules = schedules.filter(s => 
@@ -194,8 +201,8 @@ export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
       });
     }
 
-    return weeks;
-  }, [historicalLogs, schedules]);
+    return weeks.reverse();
+  }, [historicalLogs, schedules, startDate, endDate]);
 
   // Get adherence patterns
   const adherencePatterns = useMemo(() => {
@@ -235,7 +242,7 @@ export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
     };
   }, [historicalLogs]);
 
-  // Get daily adherence data for calendar
+  // Get daily adherence data for calendar (always show current month)
   const dailyAdherence = useMemo(() => {
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
@@ -269,7 +276,7 @@ export const useHistoricalData = (timeframe: 30 | 60 | 90 = 30) => {
     historicalLogs,
     schedules,
     streak: calculateStreak,
-    monthlyAdherence,
+    rangeAdherence,
     weeklyBreakdown,
     adherencePatterns,
     dailyAdherence

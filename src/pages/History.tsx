@@ -7,21 +7,27 @@ import { WeeklyAdherenceCard } from '@/components/history/WeeklyAdherenceCard';
 import { InsightsCard } from '@/components/history/InsightsCard';
 import { CompactCalendar } from '@/components/history/CompactCalendar';
 import { DayDetailSheet } from '@/components/history/DayDetailSheet';
+import { DateRangeFilter } from '@/components/history/DateRangeFilter';
 import { useMedications } from '@/hooks/useMedications';
-import { isSameDay, parseISO } from 'date-fns';
+import { isSameDay, parseISO, subDays } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 export default function History() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date()
+  });
   
   const { 
     streak, 
-    monthlyAdherence, 
+    rangeAdherence, 
     weeklyBreakdown, 
     adherencePatterns,
     dailyAdherence,
     historicalLogs,
     schedules
-  } = useHistoricalData(90);
+  } = useHistoricalData(dateRange);
 
   const { medications } = useMedications();
 
@@ -53,13 +59,28 @@ export default function History() {
     };
   }).filter(item => item.medication);
 
+  const presets = [
+    { label: 'Last 7 Days', days: 7 },
+    { label: 'Last 30 Days', days: 30 },
+    { label: 'Last 90 Days', days: 90 },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       
+      {/* Date Range Filter */}
+      <div className="container mx-auto px-4 pt-6">
+        <DateRangeFilter 
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          presets={presets}
+        />
+      </div>
+      
       {/* Hero Stats */}
       <HistoryHeroStats 
-        adherence={monthlyAdherence}
+        adherence={rangeAdherence}
         streak={streak}
         weeklyData={weeklyBreakdown.map(w => ({ label: w.label, adherence: w.adherence }))}
       />
