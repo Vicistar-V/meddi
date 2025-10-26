@@ -374,23 +374,18 @@ export const CameraView = () => {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>AI Pill Recognition</AlertTitle>
-        <AlertDescription>
-          Point your camera at a pill for real-time identification using Lovable AI vision.
-        </AlertDescription>
-      </Alert>
-
-      <Card className="relative overflow-hidden">
-        <div className="relative aspect-video bg-muted">
+    <div className="space-y-6">
+      {/* Premium Camera View */}
+      <div className="relative overflow-hidden rounded-3xl shadow-2xl backdrop-blur-sm border border-border/50">
+        <div className="relative aspect-[4/3] md:aspect-video bg-gradient-to-br from-muted/50 to-muted">
           {!isStreaming && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-              <Camera className="h-16 w-16 mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium mb-2">Camera Not Active</p>
-              <p className="text-sm text-muted-foreground">
-                Click the button below to start pill identification
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+                <Camera className="relative h-20 w-20 text-primary/60 mb-6" />
+              </div>
+              <p className="text-xs text-muted-foreground/70 max-w-xs">
+                Ready to identify
               </p>
             </div>
           )}
@@ -405,81 +400,96 @@ export const CameraView = () => {
           <canvas ref={canvasRef} className="hidden" />
           
           {isAnalyzing && isStreaming && (
-            <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-sm flex items-center gap-2">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              {loadingStage || 'Analyzing...'}
+            <div className="absolute top-6 right-6 bg-background/95 backdrop-blur-md border border-border/50 px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-4">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-foreground font-medium">{loadingStage || 'Analyzing'}</span>
             </div>
           )}
           
           {result && isStreaming && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent backdrop-blur-sm p-6 animate-in slide-in-from-bottom-6">
               {result.identification.identified ? (
-                <div className="space-y-2 text-white">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-lg">{result.identification.name}</p>
-                    <span className="text-sm opacity-90">
-                      {(result.identification.confidence * 100).toFixed(0)}% confident
+                <div className="space-y-3 text-white">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-bold text-xl">{result.identification.name}</p>
+                    <span className="text-xs bg-white/20 backdrop-blur px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {(result.identification.confidence * 100).toFixed(0)}%
                     </span>
                   </div>
                   
                   {result.databaseMatch.exists ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-success text-sm">✓ In your medications</span>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <span className="text-green-300 font-medium">In your medications</span>
                       {result.contextualInfo.shouldTakeNow && (
-                        <span className="text-blue-400 text-sm">• Time to take</span>
+                        <span className="text-blue-300">• Time to take</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-yellow-400 text-sm">⚠️ Not in your list</span>
+                    <div className="flex items-center gap-2 text-sm">
+                      <AlertCircle className="h-4 w-4 text-yellow-400" />
+                      <span className="text-yellow-300">Not in your list</span>
+                    </div>
                   )}
                   
                   {result.interactions?.has_interactions && (
-                    <p className="text-xs text-red-300">
-                      ⚠️ {result.interactions.interactions.length} interaction(s) detected
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-red-300">
+                      <AlertCircle className="h-3 w-3" />
+                      {result.interactions.interactions.length} interaction(s) detected
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="text-white">
-                  <p className="text-sm opacity-90">Unable to identify pill</p>
-                  <p className="text-xs opacity-70 mt-1">
+                <div className="text-white space-y-2">
+                  <p className="text-sm font-medium opacity-90">Unable to identify pill</p>
+                  <p className="text-xs opacity-70">
                     {result.identification.description || "Try adjusting the angle or lighting"}
                   </p>
                 </div>
               )}
             </div>
           )}
+
+          {/* Floating Capture Button - Only when streaming */}
+          {isStreaming && !isAnalyzing && (
+            <button
+              onClick={captureAndAnalyze}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 h-16 w-16 rounded-full bg-primary shadow-2xl shadow-primary/50 hover:scale-110 active:scale-95 transition-transform duration-200 flex items-center justify-center animate-in zoom-in"
+            >
+              <Camera className="h-7 w-7 text-primary-foreground" />
+            </button>
+          )}
         </div>
-      </Card>
+      </div>
 
       {/* Smart Context-Aware Result Display */}
       {result && !isStreaming && (
-        <div className="space-y-3">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Basic Identification Card */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-lg">
+          <Card className="p-6 shadow-lg border-border/50 backdrop-blur">
+            <div className="flex items-start justify-between mb-4 gap-4">
+              <h3 className="font-bold text-xl">
                 {result.identification.identified 
                   ? result.identification.name 
                   : "Unable to Identify"}
               </h3>
               {result.identification.identified && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs bg-muted px-3 py-1.5 rounded-full text-muted-foreground font-medium whitespace-nowrap">
                   {(result.identification.confidence * 100).toFixed(0)}% confident
                 </span>
               )}
             </div>
 
             {result.identification.description && (
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 {result.identification.description}
               </p>
             )}
 
             {result.identification.warning && (
-              <Alert className="mb-3">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
+              <Alert className="mb-0 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-sm text-orange-900 dark:text-orange-100">
                   {result.identification.warning}
                 </AlertDescription>
               </Alert>
@@ -490,64 +500,67 @@ export const CameraView = () => {
           {result.identification.identified && (
             <>
               {result.databaseMatch.exists ? (
-                <Card className="p-4 border-success/30 bg-success-light">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-success flex items-center justify-center">
-                        <CheckCircle className="h-5 w-5 text-white" />
+                <Card className="p-6 border-green-200/50 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10 shadow-lg backdrop-blur">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
+                        <CheckCircle className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-success-dark">
+                        <p className="font-bold text-green-900 dark:text-green-100">
                           Found in Your Medications
                         </p>
                         {result.databaseMatch.matchType === 'partial' && (
-                          <p className="text-xs text-success-dark/70">Partial name match</p>
+                          <p className="text-xs text-green-700 dark:text-green-300">Partial name match</p>
                         )}
                       </div>
                     </div>
 
                     {/* Dosage Mismatch Warning */}
                     {result.databaseMatch.dosageMismatch && (
-                      <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-700">
+                      <Alert className="border-orange-300 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:bg-orange-950/20 dark:border-orange-700 shadow-sm">
                         <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                        <AlertTitle className="text-orange-900 dark:text-orange-100">Dosage Mismatch Detected</AlertTitle>
-                        <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                        <AlertTitle className="text-orange-900 dark:text-orange-100 font-bold">Dosage Mismatch</AlertTitle>
+                        <AlertDescription className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
                           <p>Identified: <strong>{result.databaseMatch.dosageMismatch.identified}</strong></p>
                           <p>In your list: <strong>{result.databaseMatch.dosageMismatch.inDatabase}</strong></p>
-                          <p className="mt-1">⚠️ Please verify with your pharmacist before taking.</p>
+                          <p className="mt-2">⚠️ Verify with pharmacist before taking</p>
                         </AlertDescription>
                       </Alert>
                     )}
 
                     {/* Schedule Information */}
                     {!result.databaseMatch.dosageMismatch && (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {result.contextualInfo.shouldTakeNow ? (
-                          <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700">
-                            <Clock className="h-4 w-4" />
-                            <AlertTitle className="text-blue-900 dark:text-blue-100">Time to Take This Medication</AlertTitle>
+                          <Alert className="border-blue-300 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:bg-blue-950/20 dark:border-blue-700 shadow-sm">
+                            <Clock className="h-4 w-4 text-blue-600" />
+                            <AlertTitle className="text-blue-900 dark:text-blue-100 font-bold">Time to Take</AlertTitle>
                             <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
                               Scheduled for: {result.contextualInfo.nextScheduledTime && 
                                 formatTime(result.contextualInfo.nextScheduledTime)}
                             </AlertDescription>
                           </Alert>
                         ) : result.contextualInfo.alreadyTakenToday ? (
-                          <div className="text-sm text-muted-foreground">
-                            <p>✓ Already taken today</p>
+                          <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 space-y-1">
+                            <p className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              Already taken today
+                            </p>
                             {result.contextualInfo.timesLeftToday > 0 && (
-                              <p>
-                                {result.contextualInfo.timesLeftToday} dose(s) remaining today
+                              <p className="pl-6">
+                                {result.contextualInfo.timesLeftToday} dose(s) remaining
                                 {result.contextualInfo.nextScheduledTime && 
                                   ` at ${formatTime(result.contextualInfo.nextScheduledTime)}`}
                               </p>
                             )}
                           </div>
                         ) : result.contextualInfo.nextScheduledTime ? (
-                          <div className="text-sm text-muted-foreground">
-                            <p>Next scheduled: {formatTime(result.contextualInfo.nextScheduledTime)}</p>
+                          <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+                            <p>Next scheduled: <strong>{formatTime(result.contextualInfo.nextScheduledTime)}</strong></p>
                           </div>
                         ) : (
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
                             <p>No scheduled doses remaining today</p>
                           </div>
                         )}
@@ -556,16 +569,16 @@ export const CameraView = () => {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-4 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700">
+                <Card className="p-6 border-yellow-200/50 bg-gradient-to-br from-yellow-50/50 to-yellow-100/30 dark:bg-yellow-950/20 dark:border-yellow-700 shadow-lg backdrop-blur">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                      <p className="font-semibold text-yellow-900 dark:text-yellow-100">
-                        Not in Your Medication List
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                      <p className="font-bold text-yellow-900 dark:text-yellow-100">
+                        Not in Your List
                       </p>
                     </div>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      This medication is not currently in your tracked medications.
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                      This medication isn't currently tracked
                     </p>
                   </div>
                 </Card>
@@ -573,41 +586,43 @@ export const CameraView = () => {
 
               {/* Drug Interactions Warning */}
               {result.interactions && result.interactions.has_interactions && (
-                <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                      <p className="font-semibold text-red-900 dark:text-red-100">
-                        ⚠️ Drug Interactions Detected
+                <Card className="p-6 border-red-200/50 bg-gradient-to-br from-red-50/50 to-red-100/30 dark:bg-red-950/20 dark:border-red-800 shadow-lg backdrop-blur">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                        <AlertCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <p className="font-bold text-red-900 dark:text-red-100">
+                        Drug Interactions Detected
                       </p>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {result.interactions.interactions.slice(0, 2).map((interaction, idx) => (
                         <Alert 
                           key={idx}
-                          className={`border ${getSeverityColor(interaction.severity)}`}
+                          className={`border shadow-sm ${getSeverityColor(interaction.severity)}`}
                         >
-                          <AlertTitle className="text-sm font-semibold">
+                          <AlertTitle className="text-sm font-bold">
                             Interacts with: {interaction.drug}
                           </AlertTitle>
-                          <AlertDescription className="text-xs mt-1">
+                          <AlertDescription className="text-xs mt-2 space-y-1">
                             <p>{interaction.warning}</p>
-                            <p className="mt-1 italic">{interaction.recommendation}</p>
+                            <p className="italic">{interaction.recommendation}</p>
                           </AlertDescription>
                         </Alert>
                       ))}
                       
                       {result.interactions.interactions.length > 2 && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground pl-1">
                           +{result.interactions.interactions.length - 2} more interaction(s)
                         </p>
                       )}
                     </div>
 
-                    <Alert className="border-red-300 bg-red-100 dark:bg-red-900/20">
-                      <AlertDescription className="text-xs text-red-900 dark:text-red-100">
-                        <strong>Important:</strong> Consult your doctor or pharmacist before taking this medication.
+                    <Alert className="border-red-300 bg-gradient-to-br from-red-100 to-red-50 dark:bg-red-900/30 shadow-sm">
+                      <AlertDescription className="text-xs text-red-900 dark:text-red-100 font-medium">
+                        <strong>Important:</strong> Consult your doctor or pharmacist before taking
                       </AlertDescription>
                     </Alert>
                   </div>
@@ -620,18 +635,22 @@ export const CameraView = () => {
           <Button 
             onClick={() => setResult(null)} 
             variant="outline" 
-            className="w-full"
+            className="w-full h-12 rounded-xl font-medium hover:bg-accent transition-all"
           >
-            Clear Results & Scan Another
+            Clear & Scan Another
           </Button>
         </div>
       )}
 
+      {/* Action Buttons */}
       <div className="flex gap-3">
         {!isStreaming ? (
           <>
-            <Button onClick={startCamera} className="flex-1">
-              <Camera className="mr-2 h-4 w-4" />
+            <Button 
+              onClick={startCamera} 
+              className="flex-1 h-14 rounded-2xl text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+            >
+              <Camera className="mr-2 h-5 w-5" />
               Start Camera
             </Button>
             <div className="relative">
@@ -640,68 +659,40 @@ export const CameraView = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 disabled={isAnalyzing}
               />
               <Button 
                 variant="outline" 
                 disabled={isAnalyzing}
-                className="pointer-events-none"
+                className="h-14 w-14 rounded-2xl p-0 shadow-md hover:shadow-lg transition-all border-2"
               >
                 {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {loadingStage && <span className="text-xs">{loadingStage}</span>}
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Image
-                  </>
+                  <Upload className="h-5 w-5" />
                 )}
               </Button>
             </div>
           </>
         ) : (
-          <>
-            <Button onClick={stopCamera} variant="destructive" className="flex-1">
-              <CameraOff className="mr-2 h-4 w-4" />
-              Stop Camera
-            </Button>
-            <Button
-              onClick={captureAndAnalyze}
-              disabled={isAnalyzing}
-              variant="secondary"
-            >
-              {isAnalyzing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Analyze Now"
-              )}
-            </Button>
-          </>
+          <Button 
+            onClick={stopCamera} 
+            variant="destructive" 
+            className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            <CameraOff className="mr-2 h-5 w-5" />
+            Stop Camera
+          </Button>
         )}
       </div>
       
-      <Alert>
-        <AlertTitle>How to use</AlertTitle>
-        <AlertDescription className="space-y-2">
-          <p><strong>Option 1: Live Camera</strong></p>
-          <p>1. Click "Start Camera" to begin</p>
-          <p>2. Point your camera at a pill and hold steady</p>
-          <p>3. Click "Analyze Now" when ready</p>
-          <p className="mt-3"><strong>Option 2: Upload Image</strong></p>
-          <p>1. Click "Upload Image" to select a photo from your device</p>
-          <p>2. Choose a clear photo of the pill</p>
-          <p>3. Analysis will start automatically</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            💡 Tip: Each analysis uses AI credits, so analyze only when you have a clear view
-          </p>
-          <p className="text-xs text-muted-foreground">
-            ⚠️ Always verify pill identification with a pharmacist or doctor
-          </p>
-        </AlertDescription>
-      </Alert>
+      {/* Contextual Tips - Only show when camera active */}
+      {isStreaming && !result && (
+        <div className="text-center text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
+          <p>Hold your device steady • Ensure good lighting • Tap capture when ready</p>
+        </div>
+      )}
     </div>
   );
 };

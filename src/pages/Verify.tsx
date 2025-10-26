@@ -1,28 +1,23 @@
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CameraView } from '@/components/CameraView';
-import { Camera } from 'lucide-react';
 
 export default function Verify() {
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 pb-20">
       <AppHeader />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Camera className="h-6 w-6 text-primary" />
-              <CardTitle>Pill Verification</CardTitle>
-            </div>
-            <CardDescription>
-              Use your camera to identify and verify pills in real-time with AI
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CameraView />
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 pt-8 pb-6 max-w-4xl">
+        {/* Minimalist Hero Section */}
+        <div className="text-center mb-8 space-y-2">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Verify Pill
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto">
+            AI-powered instant identification
+          </p>
+        </div>
+
+        <CameraView />
       </div>
       <BottomNav />
     </div>
