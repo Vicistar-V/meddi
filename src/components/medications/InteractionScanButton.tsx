@@ -101,11 +101,11 @@ export const InteractionScanButton = ({
   return (
     <>
       <Button
-        variant="outline"
+        variant="default"
         size="sm"
         onClick={scanAllInteractions}
         disabled={isScanning || medications.length < 2}
-        className="w-full"
+        className="w-full bg-primary hover:bg-primary/90"
       >
         {isScanning ? (
           <>

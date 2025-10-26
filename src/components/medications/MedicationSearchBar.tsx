@@ -95,13 +95,6 @@ export const MedicationSearchBar = ({
           </div>
         )}
 
-        {/* Drug Safety Check Button */}
-        {medications.length > 0 && (
-          <div className="lg:hidden">
-            <InteractionScanButton medications={medications} />
-          </div>
-        )}
-
         {/* Sort Dropdown */}
         {onSortChange && (
           <DropdownMenu>
@@ -110,7 +103,7 @@ export const MedicationSearchBar = ({
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-popover z-50">
               <DropdownMenuLabel>Sort By</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup value={sortBy} onValueChange={(val) => onSortChange(val as any)}>
@@ -120,6 +113,13 @@ export const MedicationSearchBar = ({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+
+        {/* Drug Safety Check Button */}
+        {medications.length > 0 && (
+          <div className="lg:hidden">
+            <InteractionScanButton medications={medications} />
+          </div>
         )}
       </div>
     </div>
