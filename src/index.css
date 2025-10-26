@@ -102,6 +102,13 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Ensure dropdowns have proper background and z-index */
+  [role="menu"],
+  [role="listbox"],
+  [data-radix-popper-content-wrapper] {
+    @apply z-[100] bg-popover;
+  }
 }
 
 @layer utilities {
@@ -120,5 +127,23 @@ All colors MUST be HSL.
   
   .shadow-warm {
     box-shadow: 0 10px 15px -3px rgba(251, 243, 219, 0.3), 0 4px 6px -2px rgba(251, 243, 219, 0.2);
+  }
+  
+  /* Mobile touch optimization */
+  @media (max-width: 768px) {
+    /* Larger touch targets */
+    button, a, input, select, textarea {
+      @apply min-h-[44px];
+    }
+    
+    /* Prevent text size adjustments on orientation change */
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+    
+    /* Smooth scrolling */
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
   }
 }

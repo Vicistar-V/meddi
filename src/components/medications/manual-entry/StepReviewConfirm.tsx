@@ -106,7 +106,7 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Interaction Warning */}
       {showInteractions && interactions.length > 0 && (
         <Alert variant="destructive">
@@ -120,8 +120,8 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
       )}
 
       {/* Main Review Card */}
-      <Card className="p-6 bg-gradient-cream shadow-warm border-border/50">
-        <div className="space-y-6">
+      <Card className="p-4 md:p-6 bg-gradient-cream shadow-warm border-border/50">
+        <div className="space-y-4 md:space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -266,8 +266,8 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
 
       {/* Interaction Details */}
       {showInteractions && interactions.length > 0 && (
-        <Card className="p-6 bg-destructive/5 border-destructive">
-          <div className="space-y-3">
+        <Card className="p-4 md:p-6 bg-destructive/5 border-destructive">
+          <div className="space-y-2 md:space-y-3">
             <h4 className="font-semibold text-destructive">Detected Interactions:</h4>
             {interactions.map((interaction, idx) => (
               <Alert key={idx} variant="destructive">
@@ -282,14 +282,14 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
         </Card>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
+      {/* Action Buttons - Stack on mobile */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={handleCheckInteractions}
           disabled={isChecking || isSaving}
-          className="flex-1"
+          className="flex-1 h-11 md:h-10"
         >
           {isChecking ? (
             <>
@@ -297,7 +297,10 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
               Checking...
             </>
           ) : (
-            'Check Drug Interactions'
+            <>
+              <span className="hidden sm:inline">Check Drug Interactions</span>
+              <span className="sm:hidden">Check Interactions</span>
+            </>
           )}
         </Button>
         
@@ -305,7 +308,7 @@ export const StepReviewConfirm = ({ formData, onComplete }: StepReviewConfirmPro
           type="button"
           onClick={handleSave}
           disabled={isChecking || isSaving}
-          className="flex-1"
+          className="flex-1 h-11 md:h-10"
         >
           {isSaving ? (
             <>

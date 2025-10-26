@@ -252,12 +252,12 @@ const Medications = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-24 md:pb-20">
         <Navbar />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="text-center">
+        <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+          <div className="text-center px-4">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading medications...</p>
+            <p className="text-sm md:text-base text-muted-foreground">Loading medications...</p>
           </div>
         </div>
         <BottomNav />
@@ -268,9 +268,9 @@ const Medications = () => {
   // Empty state
   if (medications.length === 0) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-24 md:pb-20">
         <Navbar />
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-3 md:px-4 py-4 md:py-6">
           <MedicationsHeader
             medicationCount={0}
             scheduleCount={0}
@@ -278,12 +278,12 @@ const Medications = () => {
             onAddClick={() => setShowAddFlow(true)}
           />
           
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-              <Pill className="h-10 w-10 text-primary" />
+          <div className="flex flex-col items-center justify-center py-12 md:py-20 px-4">
+            <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 md:mb-6">
+              <Pill className="h-8 w-8 md:h-10 md:w-10 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">No medications added yet</h2>
-            <p className="text-muted-foreground text-center max-w-md mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2 text-center">No medications added yet</h2>
+            <p className="text-sm md:text-base text-muted-foreground text-center max-w-md mb-6 md:mb-8">
               Get started by adding your first medication to track your schedule and improve adherence.
             </p>
           </div>
@@ -295,12 +295,12 @@ const Medications = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24 md:pb-20">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6">
+        {/* Header - Stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 md:mb-6">
           <div className="flex-1">
             <MedicationsHeader
               medicationCount={medications.length}
@@ -309,11 +309,13 @@ const Medications = () => {
               onAddClick={() => setShowAddFlow(true)}
             />
           </div>
-          <InteractionScanButton medications={medications} />
+          <div className="w-full sm:w-auto">
+            <InteractionScanButton medications={medications} />
+          </div>
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 md:gap-6 mt-4 md:mt-6">
           {/* Left Column: Main Content */}
           <div className="space-y-4">
             <MedicationSearchBar

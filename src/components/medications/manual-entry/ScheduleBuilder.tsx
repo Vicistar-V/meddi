@@ -172,7 +172,7 @@ export const ScheduleBuilder = ({ schedules, onSchedulesChange }: ScheduleBuilde
 
       {/* Add Schedule Dialog */}
       <Dialog open={isAddingSchedule} onOpenChange={setIsAddingSchedule}>
-        <DialogContent className="bg-gradient-cream max-w-md">
+        <DialogContent className="bg-gradient-cream max-w-md max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Schedule</DialogTitle>
             <DialogDescription>
@@ -180,7 +180,7 @@ export const ScheduleBuilder = ({ schedules, onSchedulesChange }: ScheduleBuilde
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Time Presets */}
             <div className="space-y-2">
               <Label className="text-sm">Quick Select</Label>
@@ -258,7 +258,7 @@ export const ScheduleBuilder = ({ schedules, onSchedulesChange }: ScheduleBuilde
               type="button"
               onClick={addSchedule}
               disabled={newSchedule.days.length === 0}
-              className="w-full"
+              className="w-full h-11 md:h-10"
             >
               Add Schedule
             </Button>

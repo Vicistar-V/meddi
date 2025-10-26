@@ -12,10 +12,10 @@ interface StepPrescriptionInfoProps {
 
 export const StepPrescriptionInfo = ({ formData, updateFormData }: StepPrescriptionInfoProps) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Doctor Information */}
-      <Card className="p-6 bg-gradient-cream shadow-warm border-border/50">
-        <div className="space-y-4">
+      <Card className="p-4 md:p-6 bg-gradient-cream shadow-warm border-border/50">
+        <div className="space-y-3 md:space-y-4">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-5 w-5 text-primary" />
@@ -53,8 +53,8 @@ export const StepPrescriptionInfo = ({ formData, updateFormData }: StepPrescript
       </Card>
 
       {/* Pharmacy Information */}
-      <Card className="p-6 bg-gradient-warm-cream shadow-warm border-border/50">
-        <div className="space-y-4">
+      <Card className="p-4 md:p-6 bg-gradient-warm-cream shadow-warm border-border/50">
+        <div className="space-y-3 md:space-y-4">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Building2 className="h-5 w-5 text-primary" />
@@ -92,8 +92,8 @@ export const StepPrescriptionInfo = ({ formData, updateFormData }: StepPrescript
       </Card>
 
       {/* Prescription Details */}
-      <Card className="p-6 bg-gradient-latte shadow-warm border-border/50">
-        <div className="space-y-4">
+      <Card className="p-4 md:p-6 bg-gradient-latte shadow-warm border-border/50">
+        <div className="space-y-3 md:space-y-4">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Receipt className="h-5 w-5 text-primary" />
