@@ -54,12 +54,7 @@ export const QuickStatsHeader = ({
         <div className="mt-5 flex flex-wrap items-center gap-6">
           {/* Today's Progress */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <ProgressRing progress={todayProgress} size={48} strokeWidth={4} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs font-bold">{todayProgress}%</span>
-              </div>
-            </div>
+            <ProgressRing progress={todayProgress} size={48} strokeWidth={4} />
             <div>
               <p className="text-xs text-muted-foreground">Today</p>
               <p className="text-sm font-semibold">Progress</p>
