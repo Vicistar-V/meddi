@@ -13,16 +13,24 @@ interface CompactTimelineProps {
   todayLogs: MedicationLog[];
   currentTime?: Date;
   onMarkTaken?: (dose: DoseGroup) => void;
+  onMarkIndividual?: (scheduleId: string, medicationName: string) => void;
 }
 
 export const CompactTimeline = ({
   dosesTimeline,
   todayLogs,
   currentTime = new Date(),
-  onMarkTaken
+  onMarkTaken,
+  onMarkIndividual
 }: CompactTimelineProps) => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [markingIndex, setMarkingIndex] = useState<number | null>(null);
+  const [markingIndividual, setMarkingIndividual] = useState<string | null>(null);
+
+  // Check if a schedule is already logged
+  const isScheduleLogged = (scheduleId: string) => {
+    return todayLogs.some(log => log.schedule_id === scheduleId && log.status === 'taken');
+  };
 
   // Flatten all doses
   const allDoses = Array.from(dosesTimeline.values()).flat();
@@ -38,6 +46,16 @@ export const CompactTimeline = ({
       await onMarkTaken(dose);
     } finally {
       setMarkingIndex(null);
+    }
+  };
+
+  const handleMarkIndividualMed = async (scheduleId: string, medicationName: string) => {
+    if (!onMarkIndividual) return;
+    setMarkingIndividual(scheduleId);
+    try {
+      await onMarkIndividual(scheduleId, medicationName);
+    } finally {
+      setMarkingIndividual(null);
     }
   };
 
@@ -173,25 +191,49 @@ export const CompactTimeline = ({
                   >
                     {/* Medication List */}
                     <div className="space-y-2 rounded-lg bg-background/70 p-2">
-                      {dose.schedules.map((item, idx) => (
-                        <div
-                          key={`${item.schedule.id}-${idx}`}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <Pill className="h-3 w-3 mt-0.5 text-primary shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium">{item.medication.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.medication.dosage}
-                            </p>
-                            {item.medication.instructions && (
-                              <p className="text-xs text-muted-foreground italic mt-0.5">
-                                {item.medication.instructions}
+                      {dose.schedules.map((item, idx) => {
+                        const isLogged = isScheduleLogged(item.schedule.id);
+                        const isMarkingThis = markingIndividual === item.schedule.id;
+                        
+                        return (
+                          <div
+                            key={`${item.schedule.id}-${idx}`}
+                            className="flex items-start gap-2 text-sm"
+                          >
+                            <Pill className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className={cn("font-medium", isLogged && "text-muted-foreground line-through")}>
+                                {item.medication.name}
                               </p>
+                              <p className="text-xs text-muted-foreground">
+                                {item.medication.dosage}
+                              </p>
+                              {item.medication.instructions && (
+                                <p className="text-xs text-muted-foreground italic mt-0.5">
+                                  {item.medication.instructions}
+                                </p>
+                              )}
+                            </div>
+                            {showAction && onMarkIndividual && (
+                              <Button
+                                size="sm"
+                                variant={isLogged ? "ghost" : "default"}
+                                className="h-7 px-2"
+                                onClick={() => handleMarkIndividualMed(item.schedule.id, item.medication.name)}
+                                disabled={isLogged || isMarkingThis}
+                              >
+                                {isLogged ? (
+                                  <Check className="h-3 w-3" />
+                                ) : isMarkingThis ? (
+                                  <Clock className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'Take'
+                                )}
+                              </Button>
                             )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Action Button (Expanded) */}

@@ -98,6 +98,26 @@ const Dashboard = () => {
     }
   };
 
+  // Handle marking individual medication as taken
+  const handleMarkIndividual = async (scheduleId: string, medicationName: string) => {
+    try {
+      await logMedication.mutateAsync({
+        schedule_id: scheduleId,
+        status: 'taken',
+      });
+      toast({
+        title: 'Medication logged',
+        description: `${medicationName} marked as taken`
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to log medication. Please try again.'
+      });
+    }
+  };
+
   const handleSkip = (dose: DoseGroup) => {
     toast({
       title: 'Dose skipped',
@@ -165,7 +185,9 @@ const Dashboard = () => {
                 status={nextDoseStatus}
                 currentTime={currentTime}
                 onMarkTaken={handleMarkTaken}
+                onMarkIndividual={handleMarkIndividual}
                 onSkip={handleSkip}
+                todayLogs={todayLogs}
               />
 
               <CompactTimeline
@@ -173,6 +195,7 @@ const Dashboard = () => {
                 todayLogs={todayLogs}
                 currentTime={currentTime}
                 onMarkTaken={handleMarkTaken}
+                onMarkIndividual={handleMarkIndividual}
               />
             </>
           }

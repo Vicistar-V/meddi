@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Pill } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Pill, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DoseGroup } from '@/lib/medicationHelpers';
 import { getRelativeTime } from '@/lib/timeHelpers';
 import { formatTimeDisplay } from '@/lib/medicationHelpers';
 import { useToast } from '@/hooks/use-toast';
+import { MedicationLog } from '@/hooks/useMedications';
 
 interface CurrentDoseFocusProps {
   nextDose: DoseGroup | null;
   status: 'overdue' | 'current' | 'upcoming' | 'complete';
   currentTime?: Date;
   onMarkTaken?: (dose: DoseGroup) => void;
+  onMarkIndividual?: (scheduleId: string, medicationName: string) => void;
   onSkip?: (dose: DoseGroup) => void;
+  todayLogs?: MedicationLog[];
 }
 
 export const CurrentDoseFocus = ({
@@ -21,11 +24,19 @@ export const CurrentDoseFocus = ({
   status,
   currentTime = new Date(),
   onMarkTaken,
-  onSkip
+  onMarkIndividual,
+  onSkip,
+  todayLogs = []
 }: CurrentDoseFocusProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
+  const [markingIndividual, setMarkingIndividual] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Check if a schedule is already logged
+  const isScheduleLogged = (scheduleId: string) => {
+    return todayLogs.some(log => log.schedule_id === scheduleId && log.status === 'taken');
+  };
 
   const handleMarkTaken = async () => {
     if (!nextDose || !onMarkTaken) return;
@@ -40,6 +51,16 @@ export const CurrentDoseFocus = ({
   const handleSkip = () => {
     if (!nextDose || !onSkip) return;
     onSkip(nextDose);
+  };
+
+  const handleMarkIndividualMed = async (scheduleId: string, medicationName: string) => {
+    if (!onMarkIndividual) return;
+    setMarkingIndividual(scheduleId);
+    try {
+      await onMarkIndividual(scheduleId, medicationName);
+    } finally {
+      setMarkingIndividual(null);
+    }
   };
 
   // All Complete State
@@ -143,25 +164,49 @@ export const CurrentDoseFocus = ({
         {/* Medication List (Expanded) */}
         {isExpanded && (
           <div className="mb-4 space-y-2 rounded-lg bg-background/50 p-3">
-            {nextDose.schedules.map((item, index) => (
-              <div
-                key={`${item.schedule.id}-${index}`}
-                className="flex items-start gap-2 text-sm"
-              >
-                <Pill className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <div>
-                  <p className="font-medium">{item.medication.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.medication.dosage}
-                  </p>
-                  {item.medication.instructions && (
-                    <p className="text-xs text-muted-foreground italic mt-1">
-                      {item.medication.instructions}
+            {nextDose.schedules.map((item, index) => {
+              const isLogged = isScheduleLogged(item.schedule.id);
+              const isMarkingThis = markingIndividual === item.schedule.id;
+              
+              return (
+                <div
+                  key={`${item.schedule.id}-${index}`}
+                  className="flex items-start gap-2 text-sm"
+                >
+                  <Pill className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("font-medium", isLogged && "text-muted-foreground line-through")}>
+                      {item.medication.name}
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.medication.dosage}
+                    </p>
+                    {item.medication.instructions && (
+                      <p className="text-xs text-muted-foreground italic mt-1">
+                        {item.medication.instructions}
+                      </p>
+                    )}
+                  </div>
+                  {(isCurrent || isOverdue) && onMarkIndividual && (
+                    <Button
+                      size="sm"
+                      variant={isLogged ? "ghost" : "default"}
+                      className="h-7 px-2"
+                      onClick={() => handleMarkIndividualMed(item.schedule.id, item.medication.name)}
+                      disabled={isLogged || isMarkingThis}
+                    >
+                      {isLogged ? (
+                        <Check className="h-3 w-3" />
+                      ) : isMarkingThis ? (
+                        <Clock className="h-3 w-3 animate-spin" />
+                      ) : (
+                        'Take'
+                      )}
+                    </Button>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
