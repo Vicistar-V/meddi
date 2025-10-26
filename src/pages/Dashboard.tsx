@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
-import { AddMedicationFlow } from '@/components/AddMedicationFlow';
+
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { QuickStatsHeader } from '@/components/dashboard/QuickStatsHeader';
 import { CurrentDoseFocus } from '@/components/dashboard/CurrentDoseFocus';
@@ -26,7 +26,6 @@ import { useToast } from '@/hooks/use-toast';
 import { DoseGroup } from '@/lib/medicationHelpers';
 
 const Dashboard = () => {
-  const [showAddFlow, setShowAddFlow] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -131,7 +130,14 @@ const Dashboard = () => {
       <>
         <AppHeader />
         <main className="container mx-auto px-4 py-6 pb-32">
-          <Card className="border-2 bg-gradient-butter shadow-honey p-12 text-center">
+          <QuickStatsHeader
+            userName={userName}
+            todayProgress={0}
+            weekStreak={0}
+            weeklyAdherence={0}
+          />
+          
+          <Card className="border-2 bg-gradient-butter shadow-honey p-12 text-center mt-6">
             <div className="mx-auto max-w-sm space-y-6">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
                 <Plus className="h-10 w-10 text-primary" />
@@ -144,7 +150,7 @@ const Dashboard = () => {
                   Add your first medication to start tracking your doses
                 </p>
                 <Button
-                  onClick={() => setShowAddFlow(true)}
+                  onClick={() => navigate('/medications/add')}
                   size="lg"
                   className="w-full max-w-xs"
                 >
@@ -156,10 +162,6 @@ const Dashboard = () => {
           </Card>
         </main>
         <BottomNav />
-        <AddMedicationFlow 
-          open={showAddFlow} 
-          onOpenChange={setShowAddFlow} 
-        />
       </>
     );
   }
@@ -201,7 +203,7 @@ const Dashboard = () => {
           }
           sidebar={
             <>
-              <QuickActionsCard onAddMedication={() => setShowAddFlow(true)} />
+              <QuickActionsCard onAddMedication={() => navigate('/medications/add')} />
               <DailyStatsCard
                 adherence={dailyProgress}
                 completedCount={dailyStats.completed}
@@ -224,11 +226,6 @@ const Dashboard = () => {
       </button>
 
       <BottomNav />
-      
-      <AddMedicationFlow 
-        open={showAddFlow} 
-        onOpenChange={setShowAddFlow} 
-      />
     </>
   );
 };

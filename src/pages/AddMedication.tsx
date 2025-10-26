@@ -14,7 +14,7 @@ export default function AddMedication() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addMedication, addSchedule } = useMedications();
-  const [mode, setMode] = useState<'scan' | 'manual'>('manual');
+  const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
