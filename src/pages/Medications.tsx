@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { MedicationsHeader } from '@/components/medications/MedicationsHeader';
 import { MedicationSearchBar } from '@/components/medications/MedicationSearchBar';
@@ -253,7 +253,7 @@ const Medications = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+        <AppHeader />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
@@ -269,7 +269,7 @@ const Medications = () => {
   if (medications.length === 0) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        <Navbar />
+        <AppHeader />
         <div className="container mx-auto px-4 py-6">
           <MedicationsHeader
             medicationCount={0}
@@ -295,7 +295,7 @@ const Medications = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Navbar />
+      <AppHeader onAddClick={() => navigate('/medications/add')} />
       
       <div className="container mx-auto px-4 py-6">
         {/* Header */}

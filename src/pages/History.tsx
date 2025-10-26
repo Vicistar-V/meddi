@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Navbar />
+      <AppHeader />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="mb-2 text-3xl font-bold">Medication History</h1>

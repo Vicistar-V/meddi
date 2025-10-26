@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { AddMedicationFlow } from '@/components/AddMedicationFlow';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -129,7 +129,7 @@ const Dashboard = () => {
   if (medications.length === 0) {
     return (
       <>
-        <Navbar onAddClick={() => setShowAddFlow(true)} />
+        <AppHeader />
         <main className="container mx-auto px-4 py-6 pb-32">
           <Card className="border-2 bg-gradient-butter shadow-honey p-12 text-center">
             <div className="mx-auto max-w-sm space-y-6">
@@ -166,7 +166,7 @@ const Dashboard = () => {
 
   return (
     <>
-      <Navbar onAddClick={() => setShowAddFlow(true)} />
+      <AppHeader />
       
       <main>
         <DashboardLayout

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Navbar />
+      <AppHeader />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Settings</h1>

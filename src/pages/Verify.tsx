@@ -1,4 +1,4 @@
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CameraView } from '@/components/CameraView';
 import { Camera } from 'lucide-react';
@@ -6,7 +6,7 @@ import { Camera } from 'lucide-react';
 export default function Verify() {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <AppHeader />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card>
           <CardHeader>
