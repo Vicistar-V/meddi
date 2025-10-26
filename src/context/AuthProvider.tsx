@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInAsGuest: (username: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -59,6 +60,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error };
   };
 
+  const signInAsGuest = async (username: string) => {
+    const { data, error } = await supabase.auth.signInAnonymously();
+    
+    if (!error && data.user) {
+      // Create profile with username for guest user
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ 
+          id: data.user.id, 
+          full_name: username 
+        });
+      
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+      }
+    }
+    
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -72,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, signUp, signIn, signInAsGuest, signOut }}>
       {children}
     </AuthContext.Provider>
   );
