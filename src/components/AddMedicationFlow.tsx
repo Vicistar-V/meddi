@@ -407,7 +407,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   if (flowState === 'CONFIRMATION') {
     return (
       <Dialog open={open} onOpenChange={resetAndClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-cream">
+        <DialogContent className="max-w-2xl bg-gradient-cream sm:max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Confirm Medication Details</DialogTitle>
             <DialogDescription>
@@ -455,15 +455,16 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-muted-foreground">Scheduling</h3>
 
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <Label>How often do you take this?</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {frequencyOptions.map(option => (
                     <Button
                       key={option.value}
                       type="button"
                       variant={confirmationForm.frequency === option.value ? 'default' : 'outline'}
                       onClick={() => handleFrequencyChange(option.value)}
+                      className="min-h-[44px]"
                     >
                       {option.label}
                     </Button>
@@ -506,14 +507,14 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <Button variant="outline" onClick={resetAndClose}>
+          <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
+            <Button variant="outline" onClick={resetAndClose} className="min-h-[44px]">
               Cancel
             </Button>
             <Button
               onClick={handleSaveClick}
               disabled={flowState !== 'CONFIRMATION'}
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
             >
               {flowState !== 'CONFIRMATION' ? (
                 <>
@@ -533,7 +534,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
   // Render: IDLE, UPLOADING, PROCESSING States
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
-      <DialogContent className="max-w-2xl bg-gradient-cream">
+      <DialogContent className="max-w-2xl bg-gradient-cream sm:max-h-[90vh]">
         {(flowState === 'UPLOADING' || flowState === 'PROCESSING') && (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -559,7 +560,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
               </TabsList>
 
               <TabsContent value="scan" className="space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-4">
+                <div className="border-2 border-dashed rounded-lg p-4 sm:p-8 text-center space-y-4">
                   <div className="flex flex-col items-center gap-2">
                     <Camera className="h-12 w-12 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
@@ -577,7 +578,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         id="camera-upload"
                       />
-                      <Button className="w-full" size="lg">
+                      <Button className="w-full min-h-[48px]" size="lg">
                         <Camera className="mr-2 h-5 w-5" />
                         Take Photo with Camera
                       </Button>
@@ -591,7 +592,7 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         id="gallery-upload"
                       />
-                      <Button className="w-full" size="lg" variant="outline">
+                      <Button className="w-full min-h-[48px]" size="lg" variant="outline">
                         <Upload className="mr-2 h-5 w-5" />
                         Choose from Gallery
                       </Button>
