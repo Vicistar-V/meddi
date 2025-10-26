@@ -4,7 +4,8 @@ import { MedicationLog } from '@/hooks/useMedications';
 /**
  * Get relative time string like "in 2 hours", "5 min ago", "now"
  */
-export function getRelativeTime(scheduleTime: string, currentTime: Date = new Date()): string {
+export function getRelativeTime(scheduleTime: string | undefined, currentTime: Date = new Date()): string {
+  if (!scheduleTime) return 'unknown';
   const [hours, minutes] = scheduleTime.split(':').map(Number);
   const scheduleDate = new Date(currentTime);
   scheduleDate.setHours(hours, minutes, 0, 0);
@@ -51,7 +52,8 @@ export function getRelativeTime(scheduleTime: string, currentTime: Date = new Da
 /**
  * Get time context for grouping doses
  */
-export function getTimeContext(scheduleTime: string, currentTime: Date = new Date()): 'now' | 'next' | 'later' {
+export function getTimeContext(scheduleTime: string | undefined, currentTime: Date = new Date()): 'now' | 'next' | 'later' {
+  if (!scheduleTime) return 'later';
   const [hours, minutes] = scheduleTime.split(':').map(Number);
   const scheduleDate = new Date(currentTime);
   scheduleDate.setHours(hours, minutes, 0, 0);
@@ -133,7 +135,8 @@ export function groupDosesByProximity(
 /**
  * Check if a time has passed
  */
-export function hasTimePassed(scheduleTime: string, currentTime: Date = new Date()): boolean {
+export function hasTimePassed(scheduleTime: string | undefined, currentTime: Date = new Date()): boolean {
+  if (!scheduleTime) return false;
   const [hours, minutes] = scheduleTime.split(':').map(Number);
   const scheduleDate = new Date(currentTime);
   scheduleDate.setHours(hours, minutes, 0, 0);
@@ -144,7 +147,8 @@ export function hasTimePassed(scheduleTime: string, currentTime: Date = new Date
 /**
  * Calculate time elapsed since a scheduled time (for overdue doses)
  */
-export function calculateTimeAgo(scheduleTime: string, currentTime: Date = new Date()): string {
+export function calculateTimeAgo(scheduleTime: string | undefined, currentTime: Date = new Date()): string {
+  if (!scheduleTime) return 'unknown';
   const [schedHour, schedMin] = scheduleTime.split(':').map(Number);
   const schedDate = new Date(currentTime);
   schedDate.setHours(schedHour, schedMin, 0, 0);

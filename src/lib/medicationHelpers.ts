@@ -133,11 +133,12 @@ export function getDosesByTimeOfDay(
  * Get the status of a dose
  */
 export function getDoseStatus(
-  doseTime: string,
+  doseTime: string | undefined,
   scheduleIds: string[],
   todayLogs: MedicationLog[],
   currentTime: Date = new Date()
 ): DoseStatus {
+  if (!doseTime) return 'upcoming';
   // Check if all schedules in this dose have been logged
   const allTaken = scheduleIds.every(scheduleId => 
     todayLogs.some(log => log.schedule_id === scheduleId)
@@ -182,7 +183,8 @@ export function getGreeting(userName: string | null, currentTime: Date = new Dat
 /**
  * Calculate human-readable time until dose
  */
-export function calculateTimeUntilDose(doseTime: string, currentTime: Date = new Date()): string {
+export function calculateTimeUntilDose(doseTime: string | undefined, currentTime: Date = new Date()): string {
+  if (!doseTime) return 'unknown';
   const [doseHour, doseMinute] = doseTime.split(':').map(Number);
   const doseDate = new Date(currentTime);
   doseDate.setHours(doseHour, doseMinute, 0, 0);
@@ -214,7 +216,8 @@ function getTimeOfDayFromTime(time: string): TimeOfDay {
 /**
  * Format time to display format (e.g., "8:00 AM")
  */
-export function formatTimeDisplay(time: string): string {
+export function formatTimeDisplay(time: string | undefined): string {
+  if (!time) return '--:-- --';
   const [hour, minute] = time.split(':').map(Number);
   const period = hour < 12 ? 'AM' : 'PM';
   const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
