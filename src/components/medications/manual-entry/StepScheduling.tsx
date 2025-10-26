@@ -13,9 +13,9 @@ interface StepSchedulingProps {
 
 export const StepScheduling = ({ formData, updateFormData }: StepSchedulingProps) => {
   return (
-    <div className="space-y-4 md:space-y-6">
-      <Card className="p-4 md:p-6 bg-gradient-cream shadow-warm border-border/50">
-        <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
+      <Card className="p-6 bg-gradient-cream shadow-warm border-border/50">
+        <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3 pb-4 border-b border-border">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -36,8 +36,8 @@ export const StepScheduling = ({ formData, updateFormData }: StepSchedulingProps
       </Card>
 
       {/* Duration */}
-      <Card className="p-4 md:p-6 bg-gradient-warm-cream shadow-warm border-border/50">
-        <div className="space-y-3 md:space-y-4">
+      <Card className="p-6 bg-gradient-warm-cream shadow-warm border-border/50">
+        <div className="space-y-4">
           <Label className="text-sm font-medium">Duration</Label>
           <RadioGroup
             value={formData.duration}
