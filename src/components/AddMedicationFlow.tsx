@@ -13,6 +13,7 @@ import { Loader2, AlertTriangle, Upload, Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthProvider';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AddMedicationManual } from './medications/AddMedicationManual';
 
 type FlowState = 'IDLE' | 'UPLOADING' | 'PROCESSING' | 'CONFIRMATION' | 'SAVING';
 
@@ -604,80 +605,10 @@ export const AddMedicationFlow = ({ open, onOpenChange }: AddMedicationFlowProps
               </TabsContent>
 
               <TabsContent value="manual" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="manual-name">Medication Name *</Label>
-                    <Input
-                      id="manual-name"
-                      value={manualForm.name}
-                      onChange={(e) => setManualForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Lisinopril"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="manual-dosage">Dosage *</Label>
-                    <Input
-                      id="manual-dosage"
-                      value={manualForm.dosage}
-                      onChange={(e) => setManualForm(prev => ({ ...prev, dosage: e.target.value }))}
-                      placeholder="e.g., 20mg"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="manual-instructions">Instructions</Label>
-                    <Textarea
-                      id="manual-instructions"
-                      value={manualForm.instructions}
-                      onChange={(e) => setManualForm(prev => ({ ...prev, instructions: e.target.value }))}
-                      placeholder="e.g., Take one tablet once daily"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="manual-time">Time to Take *</Label>
-                    <Input
-                      id="manual-time"
-                      type="time"
-                      value={manualForm.time}
-                      onChange={(e) => setManualForm(prev => ({ ...prev, time: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Days of Week *</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {daysOfWeek.map(day => (
-                        <Button
-                          key={day.value}
-                          type="button"
-                          size="sm"
-                          variant={manualForm.days.includes(day.value) ? 'default' : 'outline'}
-                          onClick={() => toggleManualDay(day.value)}
-                        >
-                          {day.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleManualSubmit}
-                    disabled={flowState !== 'IDLE'}
-                    className="w-full"
-                  >
-                    {flowState !== 'IDLE' ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      'Add Medication'
-                    )}
-                  </Button>
-                </div>
+                <AddMedicationManual 
+                  onComplete={resetAndClose}
+                  onCancel={resetAndClose}
+                />
               </TabsContent>
             </Tabs>
           </>
