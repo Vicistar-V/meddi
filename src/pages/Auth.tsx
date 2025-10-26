@@ -17,7 +17,7 @@ const usernameSchema = z.string()
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(true); // Guest mode is default
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -122,7 +122,7 @@ export default function Auth() {
           </div>
           <CardTitle className="text-2xl">Meddi</CardTitle>
           <CardDescription>
-            {isGuestMode ? 'Continue as guest' : isLogin ? 'Sign in to your account' : 'Create your account'}
+            {isGuestMode ? 'Start tracking your medications' : isLogin ? 'Sign in to your account' : 'Create your account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -183,30 +183,57 @@ export default function Auth() {
                 </div>
               </>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? 'Please wait...' : isGuestMode ? 'Continue as Guest' : isLogin ? 'Sign In' : 'Sign Up'}
             </Button>
           </form>
-          <div className="mt-4 space-y-2 text-center text-sm">
-            {!isGuestMode && (
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="block w-full text-primary hover:underline"
-              >
-                {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-              </button>
+          <div className="mt-6 space-y-3 text-center">
+            {isGuestMode ? (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Already have an account?
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsGuestMode(false);
+                    setIsLogin(true);
+                  }}
+                  className="text-sm text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Sign in with email
+                </button>
+              </>
+            ) : (
+              <>
+                {!isGuestMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(!isLogin)}
+                    className="block w-full text-sm text-primary hover:underline"
+                  >
+                    {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsGuestMode(true);
+                    setIsLogin(true);
+                  }}
+                  className="block w-full text-sm text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Continue as guest instead
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setIsGuestMode(!isGuestMode);
-                setIsLogin(true);
-              }}
-              className="block w-full text-muted-foreground hover:text-primary hover:underline"
-            >
-              {isGuestMode ? 'Back to sign in' : 'Continue as guest'}
-            </button>
           </div>
         </CardContent>
       </Card>
