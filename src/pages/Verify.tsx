@@ -1,11 +1,12 @@
 import { AppHeader } from '@/components/layout/AppHeader';
+import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CameraView } from '@/components/CameraView';
 import { Camera } from 'lucide-react';
 
 export default function Verify() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card>
@@ -23,6 +24,7 @@ export default function Verify() {
           </CardContent>
         </Card>
       </div>
+      <BottomNav />
     </div>
   );
 }
