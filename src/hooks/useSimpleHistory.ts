@@ -68,15 +68,19 @@ export const useSimpleHistory = (daysBack: number = 30) => {
       let monthlyTaken = 0;
       let monthlyTotal = 0;
 
+      // Map day index to day name
+      const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      
       for (let i = 0; i < daysBack; i++) {
         const currentDate = subDays(new Date(), i);
         const dateKey = format(currentDate, 'yyyy-MM-dd');
         const dayOfWeek = currentDate.getDay();
+        const dayName = dayNames[dayOfWeek];
 
         // Find schedules for this day
         const daySchedules = schedules?.filter((schedule) => {
-          const daysOfWeek = schedule.days_of_week as number[];
-          return daysOfWeek.includes(dayOfWeek);
+          const daysOfWeek = schedule.days_of_week as string[];
+          return daysOfWeek.includes(dayName);
         }) || [];
 
         if (daySchedules.length === 0) {
