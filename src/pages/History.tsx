@@ -43,7 +43,7 @@ export default function History() {
     );
   }
 
-  if (!historyData || historyData.monthlyAdherence.total === 0) {
+  if (!historyData || !historyData.monthlyAdherence || historyData.monthlyAdherence.total === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-accent/5 pb-20">
         <AppHeader />
