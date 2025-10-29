@@ -14,6 +14,7 @@ Meddi is a smart medication guardian that transforms a user's phone into a tool 
 *   **Instant Verification:** For that critical moment of doubt, the user can simply point their camera at any pill. Meddi uses on-device computer vision to analyze it in real-time, providing an immediate on-screen confirmation: "Yes, this is your 8 AM Lisinopril."
 *   **A Proactive Safety Net:** Before a new medication is even saved, Meddi silently checks it against the user's existing prescriptions for dangerous drug interactions, providing clear, critical warnings to prevent a mistake before it can ever happen.
 *   **A Calm Dashboard:** Meddi presents a clean, simple view of the day, focusing only on the *next* dose. It makes logging medications a gentle, reassuring process, celebrating completion rather than punishing delays.
+*   **Caregiver Connect:** A secure, invitation-based feature that allows users to share their medication progress with a trusted family member or caregiver. Caregivers receive a simplified, read-only view of their loved one's schedule, providing peace of mind without being intrusive. This isn't about surveillance—it's about creating a shared sense of reassurance and closing the communication loop.
 
 ## How I built it
 
@@ -45,4 +46,4 @@ Beyond the technical skills, this project taught me a profound lesson: the most 
 
 ## What's next for Meddi
 
-This is just the beginning. The next, most important feature is **Caregiver Connect**. It's for people like me. I want to build a simple, privacy-respecting way for my mom to share her progress, so I can get a quiet notification on my phone that she's taken her morning medication. It's not about tracking; it's about providing a shared sense of peace of mind. Following that, I plan to integrate smart refill reminders and expand the AI's capabilities to help manage more complex medications, continuing the mission of making medication safe and simple for everyone.
+This is just the beginning. The journey continues with features like **smart refill reminders** that proactively alert users before medications run out, and expanding the AI's capabilities to handle more complex medication regimens with multiple interacting prescriptions. Future enhancements include **push notifications** for caregivers when doses are overdue, and integration with pharmacy systems for automated refill coordination. The mission remains constant: making medication management safe, simple, and stress-free for everyone.
