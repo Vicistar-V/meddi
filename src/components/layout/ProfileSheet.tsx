@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -64,6 +64,18 @@ export const ProfileSheet = () => {
             
             <Button
               variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate('/settings');
+                setOpen(false);
+              }}
+            >
+              <Settings className="mr-3 h-5 w-5" />
+              Settings
+            </Button>
+            
+            <Button
+              variant="ghost"
               className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={handleSignOut}
             >
@@ -94,6 +106,17 @@ export const ProfileSheet = () => {
             <DropdownMenuSeparator />
           </>
         )}
+        
+        <DropdownMenuItem 
+          onClick={() => {
+            navigate('/settings');
+            setOpen(false);
+          }}
+          className="cursor-pointer"
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          Settings
+        </DropdownMenuItem>
         
         <DropdownMenuItem 
           onClick={handleSignOut}

@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      invitations: {
+        Row: {
+          accepted_by_user_id: string | null
+          created_at: string
+          created_by_user_id: string
+          expires_at: string
+          id: string
+          invitation_code: string
+          is_active: boolean
+        }
+        Insert: {
+          accepted_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id: string
+          expires_at?: string
+          id?: string
+          invitation_code: string
+          is_active?: boolean
+        }
+        Update: {
+          accepted_by_user_id?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          expires_at?: string
+          id?: string
+          invitation_code?: string
+          is_active?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_accepted_by_user_id_fkey"
+            columns: ["accepted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medication_logs: {
         Row: {
           id: string

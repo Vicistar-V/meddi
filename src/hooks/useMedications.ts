@@ -28,43 +28,48 @@ export interface MedicationLog {
   status: 'taken' | 'skipped' | 'missed';
 }
 
-export const useMedications = () => {
+export const useMedications = (targetUserId?: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Use targetUserId if provided, otherwise use current user's ID
+  const userId = targetUserId || user?.id;
 
   const { data: medications = [], isLoading } = useQuery({
-    queryKey: ['medications', user?.id],
+    queryKey: ['medications', userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('medications')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Medication[];
     },
-    enabled: !!user,
+    enabled: !!userId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: false, // Don't poll
   });
 
   const { data: schedules = [] } = useQuery({
-    queryKey: ['schedules', user?.id],
+    queryKey: ['schedules', userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('schedules')
-        .select('*');
+        .select('*')
+        .eq('user_id', userId);
       
       if (error) throw error;
       return data as Schedule[];
     },
-    enabled: !!user,
+    enabled: !!userId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: false,
   });
 
   const { data: todayLogs = [] } = useQuery({
-    queryKey: ['medication-logs', user?.id, new Date().toDateString()],
+    queryKey: ['medication-logs', userId, new Date().toDateString()],
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -72,13 +77,14 @@ export const useMedications = () => {
       const { data, error } = await supabase
         .from('medication_logs')
         .select('*')
+        .eq('user_id', userId)
         .gte('taken_at', today.toISOString())
         .eq('status', 'taken');
       
       if (error) throw error;
       return data as MedicationLog[];
     },
-    enabled: !!user,
+    enabled: !!userId,
     staleTime: 1 * 60 * 1000, // 1 minute (fresher data)
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
