@@ -15,6 +15,7 @@ interface CompactTimelineProps {
   currentTime?: Date;
   onMarkTaken?: (dose: DoseGroup) => void;
   onMarkIndividual?: (scheduleId: string, medicationName: string) => void;
+  readOnly?: boolean;
 }
 
 export const CompactTimeline = ({
@@ -22,7 +23,8 @@ export const CompactTimeline = ({
   todayLogs,
   currentTime = new Date(),
   onMarkTaken,
-  onMarkIndividual
+  onMarkIndividual,
+  readOnly = false
 }: CompactTimelineProps) => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [markingIndex, setMarkingIndex] = useState<number | null>(null);
@@ -177,7 +179,7 @@ export const CompactTimeline = ({
 
                   {/* Action or Expand */}
                   <div className="flex items-center gap-2">
-                    {showAction && onMarkTaken && !isExpanded && (
+                    {showAction && onMarkTaken && !isExpanded && !readOnly && (
                       <Button
                         size="sm"
                         onClick={(e) => {
@@ -235,7 +237,7 @@ export const CompactTimeline = ({
                                 </p>
                               )}
                             </div>
-                            {onMarkIndividual && (
+                            {onMarkIndividual && !readOnly && (
                               <Button
                                 size="sm"
                                 variant={isLogged ? "ghost" : status === 'upcoming' ? "outline" : "default"}
@@ -252,13 +254,16 @@ export const CompactTimeline = ({
                                 )}
                               </Button>
                             )}
+                            {readOnly && isLogged && (
+                              <Check className="h-4 w-4 text-success" />
+                            )}
                           </div>
                         );
                       })}
                     </div>
 
                     {/* Action Button (Expanded) */}
-                    {showAction && onMarkTaken && (
+                    {showAction && onMarkTaken && !readOnly && (
                       <Button
                         onClick={() => handleMarkTaken(dose, index)}
                         disabled={isMarking}

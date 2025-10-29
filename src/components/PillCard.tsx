@@ -9,9 +9,10 @@ interface PillCardProps {
   time: string;
   status: 'taken' | 'upcoming' | 'missed';
   onMarkTaken?: () => void;
+  readOnly?: boolean;
 }
 
-export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: PillCardProps) => {
+export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken, readOnly }: PillCardProps) => {
   return (
     <Card className={cn(
       'transition-all',
@@ -38,11 +39,14 @@ export const PillCard = ({ medicationName, dosage, time, status, onMarkTaken }: 
             <p className="text-xs text-muted-foreground">{time}</p>
           </div>
         </div>
-        {status === 'upcoming' && onMarkTaken && (
+        {status === 'upcoming' && onMarkTaken && !readOnly && (
           <Button size="sm" onClick={onMarkTaken}>
             <Check className="mr-2 h-4 w-4" />
             Mark Taken
           </Button>
+        )}
+        {status === 'upcoming' && readOnly && (
+          <div className="text-sm text-muted-foreground">Upcoming</div>
         )}
         {status === 'taken' && (
           <div className="text-sm font-medium text-success">Completed</div>

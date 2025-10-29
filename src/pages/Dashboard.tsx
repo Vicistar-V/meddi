@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Plus } from 'lucide-react';
+import { Camera, Plus, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 
@@ -34,8 +35,14 @@ const Dashboard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { medications, schedules, todayLogs, logMedication } = useMedications();
   const { data: userProfile } = useUserProfile();
+  
+  // If user is a caregiver, fetch patient's data instead
+  const targetUserId = userProfile?.patientId || userProfile?.user?.id;
+  const { medications, schedules, todayLogs, logMedication } = useMedications(targetUserId);
+  
+  const isCaregiver = userProfile?.isCaregiver || false;
+  const patientName = userProfile?.patientName || 'Patient';
 
   // Update time every minute
   useEffect(() => {
@@ -45,9 +52,9 @@ const Dashboard = () => {
 
   // Prefetch history data for faster navigation
   useEffect(() => {
-    if (userProfile?.user?.id) {
+    if (targetUserId) {
       queryClient.prefetchQuery({
-        queryKey: ['simple-history', userProfile.user.id, 30],
+        queryKey: ['simple-history', targetUserId, 30],
         queryFn: async () => {
           const daysBack = 30;
           const endDate = endOfDay(new Date());
@@ -56,20 +63,20 @@ const Dashboard = () => {
           const { data: logs } = await supabase
             .from('medication_logs')
             .select('*, schedules(*, medications(*))')
-            .eq('user_id', userProfile.user.id)
+            .eq('user_id', targetUserId)
             .gte('taken_at', startDate.toISOString())
             .lte('taken_at', endDate.toISOString());
 
           const { data: schedules } = await supabase
             .from('schedules')
             .select('*, medications(*)')
-            .eq('user_id', userProfile.user.id);
+            .eq('user_id', targetUserId);
 
           return { logs, schedules };
         },
       });
     }
-  }, [userProfile?.user?.id, queryClient]);
+  }, [targetUserId, queryClient]);
 
   // Calculate data
   const nextDose = getNextDose(medications, schedules, todayLogs, currentTime);
@@ -204,12 +211,23 @@ const Dashboard = () => {
       <main>
         <DashboardLayout
           header={
-            <QuickStatsHeader
-              userName={userName}
-              todayProgress={dailyProgress}
-              weekStreak={streak}
-              weeklyAdherence={weeklyAdherence}
-            />
+            <>
+              {isCaregiver && (
+                <Alert className="mb-4 border-primary/20 bg-primary/5">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertTitle className="text-primary">Viewing {patientName}'s Schedule</AlertTitle>
+                  <AlertDescription>
+                    You have read-only access. Only {patientName} can mark doses as taken.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <QuickStatsHeader
+                userName={isCaregiver ? patientName : userName}
+                todayProgress={dailyProgress}
+                weekStreak={streak}
+                weeklyAdherence={weeklyAdherence}
+              />
+            </>
           }
           mainContent={
             <>
@@ -217,24 +235,28 @@ const Dashboard = () => {
                 nextDose={nextDose}
                 status={nextDoseStatus}
                 currentTime={currentTime}
-                onMarkTaken={handleMarkTaken}
-                onMarkIndividual={handleMarkIndividual}
-                onSkip={handleSkip}
+                onMarkTaken={isCaregiver ? undefined : handleMarkTaken}
+                onMarkIndividual={isCaregiver ? undefined : handleMarkIndividual}
+                onSkip={isCaregiver ? undefined : handleSkip}
                 todayLogs={todayLogs}
+                readOnly={isCaregiver}
               />
 
               <CompactTimeline
                 dosesTimeline={dosesTimeline}
                 todayLogs={todayLogs}
                 currentTime={currentTime}
-                onMarkTaken={handleMarkTaken}
-                onMarkIndividual={handleMarkIndividual}
+                onMarkTaken={isCaregiver ? undefined : handleMarkTaken}
+                onMarkIndividual={isCaregiver ? undefined : handleMarkIndividual}
+                readOnly={isCaregiver}
               />
             </>
           }
           sidebar={
             <>
-              <QuickActionsCard onAddMedication={() => navigate('/medications/add')} />
+              {!isCaregiver && (
+                <QuickActionsCard onAddMedication={() => navigate('/medications/add')} />
+              )}
               <DailyStatsCard
                 adherence={dailyProgress}
                 completedCount={dailyStats.completed}
@@ -247,14 +269,16 @@ const Dashboard = () => {
         />
       </main>
 
-      {/* Mobile FAB for camera - visible only on mobile */}
-      <button
-        onClick={() => navigate('/verify')}
-        className="fixed bottom-32 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110 active:scale-95 lg:hidden"
-        aria-label="Scan prescription"
-      >
-        <Camera className="h-6 w-6" />
-      </button>
+      {/* Mobile FAB for camera - visible only on mobile and only for non-caregivers */}
+      {!isCaregiver && (
+        <button
+          onClick={() => navigate('/verify')}
+          className="fixed bottom-32 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110 active:scale-95 lg:hidden"
+          aria-label="Scan prescription"
+        >
+          <Camera className="h-6 w-6" />
+        </button>
+      )}
 
       <BottomNav />
     </>

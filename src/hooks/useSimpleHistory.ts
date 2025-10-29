@@ -33,13 +33,16 @@ export interface SimpleHistoryData {
   weeklyData: WeekData[];
 }
 
-export const useSimpleHistory = (daysBack: number = 30) => {
+export const useSimpleHistory = (daysBack: number = 30, targetUserId?: string) => {
   const { user } = useAuth();
+  
+  // Use targetUserId if provided, otherwise use current user's ID
+  const userId = targetUserId || user?.id;
 
   return useQuery({
-    queryKey: ['simple-history', user?.id, daysBack],
+    queryKey: ['simple-history', userId, daysBack],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!userId) return null;
 
       const endDate = endOfDay(new Date());
       const startDate = startOfDay(subDays(endDate, daysBack - 1));
@@ -48,7 +51,7 @@ export const useSimpleHistory = (daysBack: number = 30) => {
       const { data: logs } = await supabase
         .from('medication_logs')
         .select('*, schedules(*, medications(*))')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('taken_at', startDate.toISOString())
         .lte('taken_at', endDate.toISOString());
 
@@ -56,7 +59,7 @@ export const useSimpleHistory = (daysBack: number = 30) => {
       const { data: schedules } = await supabase
         .from('schedules')
         .select('*, medications(*)')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
       // Process data day by day
       const dayMap = new Map<string, DayData>();
@@ -169,7 +172,7 @@ export const useSimpleHistory = (daysBack: number = 30) => {
 
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes (history updates less frequently)
     refetchInterval: false, // Don't poll historical data
   });

@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import { MedicationsHeader } from '@/components/medications/MedicationsHeader';
 import { MedicationSearchBar } from '@/components/medications/MedicationSearchBar';
 import { MedicationListItem } from '@/components/medications/MedicationListItem';
@@ -15,6 +17,7 @@ import { InteractionDetailsDialog } from '@/components/medications/InteractionDe
 import { InteractionScanButton } from '@/components/medications/InteractionScanButton';
 import { useMedications, Medication, Schedule } from '@/hooks/useMedications';
 import { useMedicationAdherence } from '@/hooks/useMedicationAdherence';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/context/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,6 +39,12 @@ const Medications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const { data: userProfile } = useUserProfile();
+  const targetUserId = userProfile?.patientId || userProfile?.user?.id;
+  const isCaregiver = userProfile?.isCaregiver || false;
+  const patientName = userProfile?.patientName || 'Patient';
+  
   const {
     medications, 
     schedules, 
@@ -45,7 +54,7 @@ const Medications = () => {
     addSchedule,
     updateSchedule,
     deleteSchedule 
-  } = useMedications();
+  } = useMedications(targetUserId);
   const { getMedicationAdherence, getWeeklyScheduleData, overallAdherence } = useMedicationAdherence(
     medications,
     schedules,
@@ -295,15 +304,26 @@ const Medications = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppHeader onAddClick={() => navigate('/medications/add')} />
+      <AppHeader onAddClick={isCaregiver ? undefined : () => navigate('/medications/add')} />
       
       <div className="container mx-auto px-4 py-6">
+        {/* Caregiver Banner */}
+        {isCaregiver && (
+          <Alert className="mb-6 border-primary/20 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-primary">Viewing {patientName}'s Medications</AlertTitle>
+            <AlertDescription>
+              You have read-only access. Only {patientName} can add, edit, or delete medications.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {/* Header */}
         <MedicationsHeader
           medicationCount={medications.length}
           scheduleCount={schedules.length}
           adherenceRate={overallAdherence}
-          onAddClick={() => navigate('/medications/add')}
+          onAddClick={isCaregiver ? undefined : () => navigate('/medications/add')}
         />
 
         {/* Main Content Grid */}
@@ -341,11 +361,11 @@ const Medications = () => {
                       schedules={medSchedules}
                       logs={medLogs}
                       adherenceRate={adherenceRate}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onAddSchedule={handleAddSchedule}
-                      onEditSchedule={handleEditSchedule}
-                      onDeleteSchedule={handleDeleteSchedule}
+                      onEdit={isCaregiver ? undefined : handleEdit}
+                      onDelete={isCaregiver ? undefined : handleDelete}
+                      onAddSchedule={isCaregiver ? undefined : handleAddSchedule}
+                      onEditSchedule={isCaregiver ? undefined : handleEditSchedule}
+                      onDeleteSchedule={isCaregiver ? undefined : handleDeleteSchedule}
                       interactions={[]}
                       onViewInteractionDetails={() => handleViewInteractionDetails(medication.name, [])}
                     />

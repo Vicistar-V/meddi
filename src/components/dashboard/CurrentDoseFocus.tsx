@@ -18,6 +18,7 @@ interface CurrentDoseFocusProps {
   onMarkIndividual?: (scheduleId: string, medicationName: string) => void;
   onSkip?: (dose: DoseGroup) => void;
   todayLogs?: MedicationLog[];
+  readOnly?: boolean;
 }
 
 export const CurrentDoseFocus = ({
@@ -27,7 +28,8 @@ export const CurrentDoseFocus = ({
   onMarkTaken,
   onMarkIndividual,
   onSkip,
-  todayLogs = []
+  todayLogs = [],
+  readOnly = false
 }: CurrentDoseFocusProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
@@ -227,7 +229,7 @@ export const CurrentDoseFocus = ({
                       </p>
                     )}
                   </div>
-                  {onMarkIndividual && (
+                  {onMarkIndividual && !readOnly && (
                     <Button
                       size="sm"
                       variant={isLogged ? "ghost" : (!isCurrent && !isOverdue) ? "outline" : "default"}
@@ -244,6 +246,9 @@ export const CurrentDoseFocus = ({
                       )}
                     </Button>
                   )}
+                  {readOnly && isLogged && (
+                    <Check className="h-4 w-4 text-success" />
+                  )}
                 </div>
               );
             })}
@@ -251,36 +256,38 @@ export const CurrentDoseFocus = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={handleMarkTaken}
-            disabled={isMarking}
-            className="flex-1"
-            size="lg"
-            variant={!isCurrent && !isOverdue ? "outline" : "default"}
-          >
-            {isMarking ? (
-              <>
-                <Clock className="mr-2 h-4 w-4 animate-spin" />
-                Logging...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                {isOverdue ? 'Mark as Taken' : isCurrent ? 'Take All' : 'Take Early'}
-              </>
-            )}
-          </Button>
-          {isCurrent && (
+        {!readOnly && (
+          <div className="flex gap-2">
             <Button
-              onClick={handleSkip}
-              variant="outline"
+              onClick={handleMarkTaken}
+              disabled={isMarking}
+              className="flex-1"
               size="lg"
+              variant={!isCurrent && !isOverdue ? "outline" : "default"}
             >
-              Skip
+              {isMarking ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4 animate-spin" />
+                  Logging...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {isOverdue ? 'Mark as Taken' : isCurrent ? 'Take All' : 'Take Early'}
+                </>
+              )}
             </Button>
-          )}
-        </div>
+            {isCurrent && (
+              <Button
+                onClick={handleSkip}
+                variant="outline"
+                size="lg"
+              >
+                Skip
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Early Confirmation Dialog - All */}
