@@ -18,8 +18,8 @@ interface MedicationListItemProps {
   schedules: Schedule[];
   logs: MedicationLog[];
   adherenceRate: number;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
   onAddSchedule?: (medicationId: string) => void;
   onEditSchedule?: (schedule: Schedule) => void;
   onDeleteSchedule?: (scheduleId: string) => void;
@@ -97,27 +97,33 @@ export const MedicationListItem = ({
             )}
           </div>
 
-          {/* Actions Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(medication.id)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit Medication
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onDelete(medication.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Actions Menu - Only show if edit/delete handlers exist */}
+          {(onEdit || onDelete) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onEdit && (
+                  <DropdownMenuItem onClick={() => onEdit(medication.id)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Medication
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem 
+                    onClick={() => onDelete(medication.id)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Quick Info */}

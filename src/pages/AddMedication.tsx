@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Camera, Edit3 } from 'lucide-react';
@@ -7,13 +7,20 @@ import { AddMedicationManual, ManualEntryFormState } from '@/components/medicati
 import { CameraView } from '@/components/CameraView';
 import { useToast } from '@/hooks/use-toast';
 import { useMedications } from '@/hooks/useMedications';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function AddMedication() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: userProfile } = useUserProfile();
   const { addMedication, addSchedule } = useMedications();
+  
+  // Redirect caregivers to medications page (read-only access)
+  if (userProfile?.isCaregiver) {
+    return <Navigate to="/medications" replace />;
+  }
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);

@@ -1,4 +1,4 @@
-import { Home, Pill, Calendar } from 'lucide-react';
+import { Home, Pill, Calendar, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,12 @@ export const BottomNav = () => {
       icon: Calendar,
       path: '/history',
       label: 'History'
+    },
+    {
+      name: 'Settings',
+      icon: Settings,
+      path: '/settings',
+      label: 'Settings'
     }
   ];
 

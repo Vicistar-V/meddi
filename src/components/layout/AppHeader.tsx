@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Plus } from 'lucide-react';
+import { User, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProfileSheet } from './ProfileSheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,6 +10,7 @@ interface AppHeaderProps {
 }
 
 export const AppHeader = ({ onAddClick }: AppHeaderProps) => {
+  const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
   
@@ -81,7 +82,19 @@ export const AppHeader = ({ onAddClick }: AppHeaderProps) => {
               </Button>
             )}
             
-            {config.showProfile && <ProfileSheet />}
+            {config.showProfile && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate('/settings')}
+                  className="h-9 w-9"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <ProfileSheet />
+              </>
+            )}
           </div>
         </div>
       </div>
